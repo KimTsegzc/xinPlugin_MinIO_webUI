@@ -1,14 +1,23 @@
 // MinIO KnowledgeBase — Host 半（挂载包）
-// 通过 webServer.register 提供 /minio/api/* JSON 路由，对 MinIO 做只读浏览 + 预览。
-export function apply(ctx) {
-  const webServer = ctx.get('webServer')
-  const fs = ctx.get('fs')
-  const subprocess = ctx.get('subprocess')
-  if (webServer === undefined || fs === undefined || subprocess === undefined) return
+// 通过 webServer.register 提供 /minio/api/* JSON 路由，对 MinIO 做只读浏览 + 预览 + 上传/下载/删除。
+import { promises as nodeFs } from 'node:fs'
+import nodePath from 'node:path'
+import { spawn as nodeSpawn } from 'node:child_process'
 
-  const sandboxPolicy = ctx.get('sandboxPolicy')
-  const rawRoot = (sandboxPolicy && sandboxPolicy.workspaceRoot) || ''
-  const baseDir = (rawRoot || 'C:/Users/kimtse/.dsh/xinPlugin_MinIO_webUI').replace(/\\/g, '/').replace(/\/+$/, '')
+// 用标准 Cordis inject 规范接入 webServer（同 dsh-client-connection 的做法），
+// 避免在宿主作用域里 ctx.get('webServer') 解析不到。
+export const inject = ['webServer']
+
+export function apply(ctx) {
+  const webServer = ctx.webServer || ctx.get('webServer')
+  if (webServer === undefined) return
+
+  // 宿主级组合不一定暴露 ctx.fs / ctx.subprocess（它们多在 agent 会话上下文）。
+  // 这里用 Node 内建能力兜底：文件读写走 node:fs，进程执行走 node:child_process。
+  const subprocessSvc = ctx.get('subprocess')
+
+  // 固定到部署目录，保证状态文件 minio-config.json 位置确定。
+  const baseDir = 'C:/Users/kimtse/.dsh/xinPlugin_MinIO_webUI'
 
   const CURL = 'C:/Windows/System32/curl.exe'
   const CERTUTIL = 'C:/Windows/System32/certutil.exe'
@@ -26,6 +35,24 @@ export function apply(ctx) {
     region: 'us-east-1',
     ssl: false,
     buckets: [],
+  }
+
+  // 启动标记：用于事后确认宿主 half 是否执行、服务是否解析到。
+  try {
+    nodeFs.writeFile(baseDir + '/.minio-host.marker', JSON.stringify({
+      loaded: true,
+      time: new Date().toISOString(),
+      webServer: !!webServer,
+      subprocess: !!subprocessSvc,
+      mode: 'node-builtins-fs',
+    })).catch(() => {})
+  } catch (e) { /* ignore */ }
+
+  // 统一的文件 API（string path + utf8 text），与本插件使用方式一致。
+  const fs = {
+    resolve: async (p) => nodePath.resolve(p),
+    readText: async (p) => nodeFs.readFile(p, 'utf8'),
+    writeText: async (p, t) => { await nodeFs.writeFile(p, t, 'utf8') },
   }
 
   async function readState() {
@@ -55,10 +82,15 @@ export function apply(ctx) {
 
   function run(argv, opt) {
     const o = opt || {}
+    if (subprocessSvc && typeof subprocessSvc.spawn === 'function') return runService(argv, o)
+    return runNode(argv, o)
+  }
+
+  function runService(argv, o) {
     return new Promise((resolve) => {
       let handle
       try {
-        handle = subprocess.spawn({
+        handle = subprocessSvc.spawn({
           argv: argv,
           cwd: baseDir,
           stdio: { stdin: 'ignore', stdout: { maxBytes: o.maxOut || (32 * 1024 * 1024) }, stderr: { maxBytes: 64 * 1024 } },
@@ -75,6 +107,25 @@ export function apply(ctx) {
       }).catch((e) => {
         resolve({ exitCode: -1, stdout: '', stderr: String((e && e.message) || e) })
       })
+    })
+  }
+
+  function runNode(argv, o) {
+    return new Promise((resolve) => {
+      if (!argv || argv.length === 0) { resolve({ exitCode: -1, stdout: '', stderr: 'no argv' }); return }
+      const stdout = []
+      const stderr = []
+      let proc
+      try {
+        proc = nodeSpawn(argv[0], argv.slice(1), { cwd: baseDir, windowsHide: true })
+      } catch (e) {
+        resolve({ exitCode: -1, stdout: '', stderr: String((e && e.message) || e) })
+        return
+      }
+      proc.stdout.on('data', (c) => stdout.push(c))
+      proc.stderr.on('data', (c) => stderr.push(c))
+      proc.on('error', (e) => resolve({ exitCode: -1, stdout: Buffer.concat(stdout).toString('utf8'), stderr: String((e && e.message) || e) }))
+      proc.on('close', (code) => resolve({ exitCode: code == null ? -1 : code, stdout: Buffer.concat(stdout).toString('utf8'), stderr: Buffer.concat(stderr).toString('utf8') }))
     })
   }
 

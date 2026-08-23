@@ -34,7 +34,10 @@ window.__ModuleLoader__.load({
 
 		async function api(method, args) {
 			const res = await fetch('/minio/api/' + method, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(args || {}) });
-			return await res.json();
+			const text = await res.text();
+			if (!text) return { ok: false, error: 'empty response (http ' + res.status + ')' };
+			try { return JSON.parse(text); }
+			catch (e) { return { ok: false, error: 'bad response: ' + text.slice(0, 200) }; }
 		}
 
 		function apply(ctx) {
