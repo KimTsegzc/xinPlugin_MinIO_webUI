@@ -44,7 +44,7 @@ window.__ModuleLoader__.load({
 			if (typeof document !== 'undefined' && document.head && !document.getElementById('minio-kb-css')) {
 				const tag = document.createElement('style');
 				tag.id = 'minio-kb-css';
-				tag.textContent = CSS + '.kb-tree{width:150px}.kb-toolbar-actions{display:flex;align-items:center;gap:6px}.kb-mini{padding:3px 8px;border-radius:6px;border:1px solid var(--dsw-alias-border-l2);background:transparent;color:var(--dsw-alias-label-primary);cursor:pointer;font-size:12px;line-height:1.2}.kb-mini:hover{background:var(--dsw-alias-bg-layer-2)}.kb-mini-danger{color:var(--dsw-alias-state-error-primary)}.kb-card-actions{display:flex;gap:4px;margin-top:4px;justify-content:center}.kb-actions{display:inline-flex;gap:6px}.kb-notice{padding:6px 12px;font-size:12px;color:var(--dsw-alias-label-secondary)}';
+				tag.textContent = CSS + '.kb-tree{width:150px}.kb-menu-wrap{position:relative;display:inline-block}.kb-menu{position:absolute;right:0;top:calc(100% + 4px);background:var(--dsw-alias-bg-overlay);border:1px solid var(--dsw-alias-border-l1);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.25);min-width:120px;z-index:50;overflow:hidden}.kb-menu-item{display:block;width:100%;text-align:left;padding:8px 12px;border:none;background:transparent;color:var(--dsw-alias-label-primary);cursor:pointer;font-size:13px}.kb-menu-item:hover{background:var(--dsw-alias-bg-layer-2)}.kb-menu-danger{color:var(--dsw-alias-state-error-primary)}.kb-toolbar-actions{display:flex;align-items:center;gap:6px}.kb-mini{padding:3px 8px;border-radius:6px;border:1px solid var(--dsw-alias-border-l2);background:transparent;color:var(--dsw-alias-label-primary);cursor:pointer;font-size:12px;line-height:1.2}.kb-mini:hover{background:var(--dsw-alias-bg-layer-2)}.kb-mini-danger{color:var(--dsw-alias-state-error-primary)}.kb-card-actions{display:flex;gap:4px;margin-top:4px;justify-content:center}.kb-actions{display:inline-flex;gap:6px}.kb-notice{padding:6px 12px;font-size:12px;color:var(--dsw-alias-label-secondary)}';
 				document.head.appendChild(tag);
 			}
 
@@ -72,6 +72,8 @@ window.__ModuleLoader__.load({
 			const IconFolder = React.createElement('svg', { width: 40, height: 40, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5 }, React.createElement('path', { d: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z' }));
 			const IconFile = React.createElement('svg', { width: 40, height: 40, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5 }, React.createElement('path', { d: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z' }), React.createElement('path', { d: 'M14 2v6h6' }));
 			const IconClose = React.createElement('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' }, React.createElement('path', { d: 'M18 6 6 18M6 6l12 12' }));
+			const IconUpload = React.createElement('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }, React.createElement('path', { d: 'M12 16V4M6 10l6-6 6 6' }), React.createElement('path', { d: 'M4 20h16' }));
+			const IconMore = React.createElement('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' }, React.createElement('circle', { cx: 12, cy: 5, r: 1.2 }), React.createElement('circle', { cx: 12, cy: 12, r: 1.2 }), React.createElement('circle', { cx: 12, cy: 19, r: 1.2 }));
 
 			function KbFooterButton() {
 				return React.createElement('button', { className: 'kb-footer-btn', onClick: () => kbStore.toggle() }, IconDatabase, React.createElement('span', null, 'Knowledge Base'));
@@ -180,6 +182,7 @@ window.__ModuleLoader__.load({
 				const [addOpen, setAddOpen] = React.useState(false);
 				const [preview, setPreview] = React.useState(null);
 				const [confirmKey, setConfirmKey] = React.useState('');
+				const [menuKey, setMenuKey] = React.useState('');
 				const [uploading, setUploading] = React.useState(false);
 
 				const loadState = () => api('getState', {}).then((r) => { if (r && r.ok) setState(r.state); else setListErr((r && r.error) || '加载失败'); }).catch((e) => setListErr(String(e && e.message || e)));
@@ -214,6 +217,11 @@ window.__ModuleLoader__.load({
 				const onDrop = (e) => { e.preventDefault(); e.stopPropagation(); if (e.dataTransfer) uploadFiles(e.dataTransfer.files); };
 				const onDragOver = (e) => { e.preventDefault(); e.stopPropagation(); };
 
+				const doReference = (item) => {
+					// 引用：V1.2 暂以文件预览承载，完整「引用到 DSH 对话/附件」见 V2。
+					setMenuKey('');
+					if (sel) setPreview(item);
+				};
 				const doDownload = (item) => {
 					if (!sel) return;
 					setNotice('');
@@ -248,8 +256,7 @@ window.__ModuleLoader__.load({
 					React.createElement('span', { className: 'kb-topbar-title' }, 'Knowledge Base 知识库'),
 					React.createElement('div', { className: 'kb-topbar-actions' },
 						React.createElement('button', { className: 'kb-iconbtn', onClick: () => setConfigOpen(true), title: '加MinIO配置' }, IconGear),
-						React.createElement('button', { className: 'kb-iconbtn', onClick: () => setAddOpen(true), title: '加Bucket' }, IconPlus),
-						React.createElement('button', { className: 'kb-iconbtn', onClick: () => kbStore.closePanel(), title: '关闭' }, IconClose)));
+						React.createElement('button', { className: 'kb-iconbtn', onClick: () => setAddOpen(true), title: '加Bucket' }, IconPlus)));
 
 				const tree = React.createElement('div', { className: 'kb-tree' },
 					React.createElement('div', { className: 'kb-tree-title' }, 'Buckets'),
@@ -263,28 +270,32 @@ window.__ModuleLoader__.load({
 					explorer = React.createElement('div', { className: 'kb-empty' }, '选择左侧 Bucket 开始浏览');
 				} else {
 					const toolbar = React.createElement('div', { className: 'kb-toolbar' },
+						React.createElement('label', { className: 'kb-btn' }, uploading ? '上传中…' : React.createElement(React.Fragment, null, IconUpload, '上传'),
+							React.createElement('input', { type: 'file', multiple: true, style: { display: 'none' }, onChange: (e) => { uploadFiles(e.target.files); e.target.value = ''; } })),
 						React.createElement('div', { className: 'kb-breadcrumb' },
 							React.createElement('span', { className: 'kb-crumb', onClick: () => setPrefix('') }, 'Knowledge Base'),
 							crumbs.map((c, i) => React.createElement(React.Fragment, { key: i },
 								React.createElement('span', { className: 'kb-crumb-sep' }, ' / '),
 								React.createElement('span', { className: 'kb-crumb', onClick: () => setPrefix(c.prefix) }, c.label)))),
-						React.createElement('div', { className: 'kb-toolbar-actions' },
-							React.createElement('label', { className: 'kb-btn' }, uploading ? '上传中…' : '上传',
-								React.createElement('input', { type: 'file', multiple: true, style: { display: 'none' }, onChange: (e) => { uploadFiles(e.target.files); e.target.value = ''; } })),
-							React.createElement('div', { className: 'kb-viewtoggle' },
-								React.createElement('button', { className: view === 'icon' ? 'on' : '', onClick: () => setView('icon') }, '图标'),
-								React.createElement('button', { className: view === 'list' ? 'on' : '', onClick: () => setView('list') }, '列表'))));
+						React.createElement('div', { className: 'kb-viewtoggle' },
+							React.createElement('button', { className: view === 'icon' ? 'on' : '', onClick: () => setView('icon') }, '图标'),
+							React.createElement('button', { className: view === 'list' ? 'on' : '', onClick: () => setView('list') }, '列表')));
 					if (listErr) explorer = React.createElement('div', { className: 'kb-empty' }, '加载失败：' + listErr);
 					else if (!list) explorer = React.createElement('div', { className: 'kb-empty' }, '加载中…');
 					else {
 						const folders = list.folders.map((k) => ({ isFolder: true, key: k, name: k.split('/').filter(Boolean).pop(), type: 'folder' }));
 						const files = list.files;
 						const all = folders.concat(files);
-						const actions = (item) => item.isFolder ? null : React.createElement('div', { className: 'kb-card-actions' },
-							React.createElement('button', { className: 'kb-mini', onClick: (e) => { e.stopPropagation(); doDownload(item); } }, '下载'),
-							confirmKey === item.key
-								? React.createElement('button', { className: 'kb-mini kb-mini-danger', onClick: (e) => { e.stopPropagation(); doDelete(item); } }, '确认删除')
-								: React.createElement('button', { className: 'kb-mini kb-mini-danger', onClick: (e) => { e.stopPropagation(); setConfirmKey(item.key); } }, '删除'));
+						const actions = (item) => item.isFolder ? null : React.createElement('div', { className: 'kb-menu-wrap' },
+							React.createElement('button', { className: 'kb-mini', title: '更多', onClick: (e) => { e.stopPropagation(); setMenuKey(menuKey === item.key ? null : item.key); } }, IconMore),
+							menuKey === item.key ? React.createElement('div', { className: 'kb-menu', onClick: (e) => e.stopPropagation() },
+								React.createElement('button', { className: 'kb-menu-item', onClick: () => { doReference(item); setMenuKey(null); } }, '引用'),
+								React.createElement('button', { className: 'kb-menu-item', onClick: () => { openFile(item); setMenuKey(null); } }, '预览'),
+								React.createElement('button', { className: 'kb-menu-item', onClick: () => { doDownload(item); setMenuKey(null); } }, '下载'),
+								confirmKey === item.key
+									? React.createElement('button', { className: 'kb-menu-item kb-menu-danger', onClick: () => { doDelete(item); setMenuKey(null); } }, '确认删除')
+									: React.createElement('button', { className: 'kb-menu-item kb-menu-danger', onClick: () => { setConfirmKey(item.key); } }, '删除')
+							) : null);
 						if (!all.length) explorer = React.createElement('div', { className: 'kb-empty' }, '空目录');
 						else if (view === 'icon') {
 							explorer = React.createElement('div', { className: 'kb-grid', onDragOver, onDrop }, all.map((item) => React.createElement('div', { key: item.isFolder ? item.key : 'f:' + item.key, className: 'kb-card', onClick: () => openFile(item) },
