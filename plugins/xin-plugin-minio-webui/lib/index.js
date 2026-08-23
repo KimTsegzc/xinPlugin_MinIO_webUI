@@ -38,8 +38,11 @@ export function apply(ctx) {
     ssl: false,
     buckets: [],
     // 联动 Chroma 向量入库（可选）：上传成功后调用 ingest.py 抽文本入库。
+    ragEnabled: true,
     chromaPython: 'python',
     chromaIngestScript: 'C:/Users/kimtse/.dsh/xinPlugin_Chroma_fastMCP/ingest.py',
+    ragMcpUrl: 'http://127.0.0.1:8000/mcp',
+    ragServerName: 'chroma',
     // 入库状态记录：key -> { ok, time, chunks, error, skipped }
     ingestions: {},
   }
@@ -225,6 +228,7 @@ export function apply(ctx) {
   async function fileSha256(p) { return sha256Hex(await nodeFs.readFile(p)) }
   // 联动 Chroma 向量入库：上传成功后调用 ingest.py（抽文本→分块→向量入库）。
   async function runIngest(state, localFile, sourceName) {
+    if (state.ragEnabled === false) return { skipped: true }
     const py = String(state.chromaPython || 'python')
     const script = String(state.chromaIngestScript || '')
     if (!script) return { skipped: true }
@@ -293,7 +297,7 @@ export function apply(ctx) {
       try {
         const cur = await readState()
         const patch = (payload && payload.config) || {}
-        for (const k in ['endpoint', 'accessKey', 'secretKey', 'region', 'ssl']) if (patch[k] !== undefined) cur[k] = patch[k]
+        for (const k in ['endpoint', 'accessKey', 'secretKey', 'region', 'ssl', 'ragEnabled', 'chromaPython', 'chromaIngestScript', 'ragMcpUrl', 'ragServerName']) if (patch[k] !== undefined) cur[k] = patch[k]
         const saved = await writeState(cur)
         return { ok: true, state: saved }
       } catch (e) { return { ok: false, error: String((e && e.message) || e) } }
@@ -309,6 +313,40 @@ export function apply(ctx) {
         if (e) return { ok: false, error: e, detail: xml.slice(0, 500) }
         return { ok: true, allBuckets: parseBucketNames(xml) }
       } catch (err) { return { ok: false, error: String((err && err.message) || err) } }
+    },
+    async testRag(payload) {
+      try {
+        const cfg = (payload && payload.config) ? payload.config : await readState()
+        const py = String(cfg.chromaPython || 'python')
+        const script = String(cfg.chromaIngestScript || '')
+        const checks = []
+        // 1) Python
+        try {
+          const v = await run([py, '--version'])
+          checks.push({ name: 'Python', ok: v.exitCode === 0, msg: v.exitCode === 0 ? ('可用 v' + String(v.stdout || '').replace(/\s+/g, ' ').trim()) : '未找到或不可执行:' + (v.stderr || '').slice(0, 80) })
+        } catch (e) { checks.push({ name: 'Python', ok: false, msg: String((e && e.message) || e) }) }
+        // 2) Ingest 脚本
+        try {
+          await nodeFs.access(await fs.resolve(script))
+          checks.push({ name: 'Ingest 脚本', ok: true, msg: script || '(未配置)' })
+        } catch (e) { checks.push({ name: 'Ingest 脚本', ok: false, msg: '未找到: ' + (script || '(未配置)') }) }
+        // 3) Chroma 模块
+        try {
+          const im = await run([py, '-c', 'import chromadb,fastmcp,pypdf'])
+          checks.push({ name: 'Chroma 模块', ok: im.exitCode === 0, msg: im.exitCode === 0 ? 'chromadb/fastmcp/pypdf 可导入' : (im.stderr || '').slice(0, 120) || 'import 失败' })
+        } catch (e) { checks.push({ name: 'Chroma 模块', ok: false, msg: String((e && e.message) || e) }) }
+        // 4) MCP HTTP 端点
+        const url = String(cfg.ragMcpUrl || '')
+        if (url) {
+          try {
+            const probe = await run([CURL, '-s', '-o', 'NUL', '-w', '%{http_code}', '-m', '6', url])
+            const code = String(probe.stdout || '').trim()
+            const alive = !!code && ['200', '204', '400', '405', '406'].indexOf(code) !== -1
+            checks.push({ name: 'MCP 端点', ok: alive, msg: url + ' → HTTP ' + (code || '无响应/超时') })
+          } catch (e) { checks.push({ name: 'MCP 端点', ok: false, msg: url + ' 探测失败: ' + String((e && e.message) || e) }) }
+        }
+        return { ok: checks.every((c) => c.ok), checks }
+      } catch (err) { return { ok: false, error: String((err && err.message) || err), checks: [] } }
     },
     async bucketExists(payload) {
       try {
