@@ -58,7 +58,7 @@ window.__ModuleLoader__.load({
 			if (typeof document !== 'undefined' && document.head && !document.getElementById('minio-kb-css')) {
 				const tag = document.createElement('style');
 				tag.id = 'minio-kb-css';
-				tag.textContent = CSS + '.kb-tree{width:150px}.kb-menu-wrap{position:relative;display:inline-block}.kb-menu{position:absolute;right:0;top:calc(100% + 4px);background:var(--dsw-alias-bg-overlay);border:1px solid var(--dsw-alias-border-l1);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.25);min-width:120px;z-index:50;overflow:hidden}.kb-menu-item{display:block;width:100%;text-align:left;padding:8px 12px;border:none;background:transparent;color:var(--dsw-alias-label-primary);cursor:pointer;font-size:13px}.kb-menu-item:hover{background:var(--dsw-alias-bg-layer-2)}.kb-menu-danger{color:var(--dsw-alias-state-error-primary)}.kb-toolbar-actions{display:flex;align-items:center;gap:6px}.kb-mini{padding:3px 8px;border-radius:6px;border:1px solid var(--dsw-alias-border-l2);background:transparent;color:var(--dsw-alias-label-primary);cursor:pointer;font-size:12px;line-height:1.2}.kb-mini:hover{background:var(--dsw-alias-bg-layer-2)}.kb-mini-danger{color:var(--dsw-alias-state-error-primary)}.kb-card-actions{display:flex;gap:4px;margin-top:4px;justify-content:center}.kb-actions{display:inline-flex;gap:6px}.kb-notice{padding:6px 12px;font-size:12px;color:var(--dsw-alias-label-secondary)}.kb-card{position:relative}.kb-card-corner{position:absolute;top:6px;right:6px;z-index:5}.kb-corner-btn{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;padding:0;border-radius:6px;border:1px solid var(--dsw-alias-border-l2);background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer}.kb-corner-btn:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}.kb-menu-fixed{position:fixed;z-index:1000;transform:translateX(-100%);background:var(--dsw-alias-bg-overlay);border:1px solid var(--dsw-alias-border-l1);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.25);min-width:120px;overflow:hidden}.kb-explorer{position:relative}.kb-drop-overlay{position:absolute;inset:0;z-index:90;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:var(--dsw-alias-bg-overlay);border:2px dashed var(--dsw-alias-brand-primary);border-radius:10px;padding:24px;text-align:center;pointer-events:none}.kb-drop-icon{width:52px;height:52px;color:var(--dsw-alias-brand-primary);display:flex;align-items:center;justify-content:center}.kb-drop-icon svg{width:52px;height:52px}.kb-drop-title{font-size:16px;font-weight:600;color:var(--dsw-alias-label-primary)}.kb-drop-sub{font-size:12px;color:var(--dsw-alias-label-secondary)}.kb-drop-limit{font-size:12px;color:var(--dsw-alias-state-warn-primary)}.kb-card-name{display:flex;align-items:baseline;justify-content:center;width:100%;min-width:0;font-size:12px;word-break:keep-all}.kb-card-base{flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.kb-card-ext{flex:none;white-space:nowrap}.kb-list td{white-space:nowrap}.kb-list table{table-layout:fixed}.kb-list .kb-card-name{justify-content:flex-start}.kb-modal-pre{max-height:70vh;overflow:auto}.kb-modal-csv{overflow:auto;max-height:70vh}.kb-modal-csv table{width:100%;border-collapse:collapse;font-size:12px}.kb-modal-csv th,.kb-modal-csv td{border:1px solid var(--dsw-alias-border-l2);padding:6px 8px;text-align:left;white-space:nowrap}.kb-modal-csv th{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-secondary);font-weight:600}.kb-modal-csv td{color:var(--dsw-alias-label-primary)}.kb-sort{display:flex;gap:4px;align-items:center}.kb-detail-bar{display:flex;flex-wrap:wrap;gap:12px;padding:10px 18px;border-bottom:1px solid var(--dsw-alias-border-l1);font-size:12px;color:var(--dsw-alias-label-secondary)}.kb-search{min-width:120px;flex:0 1 auto;padding:5px 10px;border-radius:6px;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font-size:12px;outline:none}';
+				tag.textContent = CSS + '.kb-tree{width:150px}.kb-menu-wrap{position:relative;display:inline-block}.kb-menu{position:absolute;right:0;top:calc(100% + 4px);background:var(--dsw-alias-bg-overlay);border:1px solid var(--dsw-alias-border-l1);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.25);min-width:120px;z-index:50;overflow:hidden}.kb-menu-item{display:block;width:100%;text-align:left;padding:8px 12px;border:none;background:transparent;color:var(--dsw-alias-label-primary);cursor:pointer;font-size:13px}.kb-menu-item:hover{background:var(--dsw-alias-bg-layer-2)}.kb-menu-danger{color:var(--dsw-alias-state-error-primary)}.kb-toolbar-actions{display:flex;align-items:center;gap:6px}.kb-mini{padding:3px 8px;border-radius:6px;border:1px solid var(--dsw-alias-border-l2);background:transparent;color:var(--dsw-alias-label-primary);cursor:pointer;font-size:12px;line-height:1.2}.kb-mini:hover{background:var(--dsw-alias-bg-layer-2)}.kb-mini-danger{color:var(--dsw-alias-state-error-primary)}.kb-card-actions{display:flex;gap:4px;margin-top:4px;justify-content:center}.kb-actions{display:inline-flex;gap:6px}.kb-notice{padding:6px 12px;font-size:12px;color:var(--dsw-alias-label-secondary)}.kb-card{position:relative}.kb-card-corner{position:absolute;top:6px;right:6px;z-index:5}.kb-corner-btn{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;padding:0;border-radius:6px;border:1px solid var(--dsw-alias-border-l2);background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer}.kb-corner-btn:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}.kb-menu-fixed{position:fixed;z-index:1000;transform:translateX(-100%);background:var(--dsw-alias-bg-overlay);border:1px solid var(--dsw-alias-border-l1);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.25);min-width:120px;overflow:hidden}.kb-explorer{position:relative}.kb-drop-overlay{position:absolute;inset:0;z-index:90;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:var(--dsw-alias-bg-overlay);border:2px dashed var(--dsw-alias-brand-primary);border-radius:10px;padding:24px;text-align:center;pointer-events:none}.kb-drop-icon{width:52px;height:52px;color:var(--dsw-alias-brand-primary);display:flex;align-items:center;justify-content:center}.kb-drop-icon svg{width:52px;height:52px}.kb-drop-title{font-size:16px;font-weight:600;color:var(--dsw-alias-label-primary)}.kb-drop-sub{font-size:12px;color:var(--dsw-alias-label-secondary)}.kb-drop-limit{font-size:12px;color:var(--dsw-alias-state-warn-primary)}.kb-card-name{display:flex;align-items:baseline;justify-content:center;width:100%;min-width:0;font-size:12px;word-break:keep-all}.kb-card-base{flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.kb-card-ext{flex:none;white-space:nowrap}.kb-list td{white-space:nowrap}.kb-list table{table-layout:fixed}.kb-list .kb-card-name{justify-content:flex-start}.kb-modal-pre{max-height:70vh;overflow:auto}.kb-modal-csv{overflow:auto;max-height:70vh}.kb-modal-csv table{width:100%;border-collapse:collapse;font-size:12px}.kb-modal-csv th,.kb-modal-csv td{border:1px solid var(--dsw-alias-border-l2);padding:6px 8px;text-align:left;white-space:nowrap}.kb-modal-csv th{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-secondary);font-weight:600}.kb-modal-csv td{color:var(--dsw-alias-label-primary)}.kb-sort{display:flex;gap:4px;align-items:center}.kb-detail-bar{display:flex;flex-wrap:wrap;gap:12px;padding:10px 18px;border-bottom:1px solid var(--dsw-alias-border-l1);font-size:12px;color:var(--dsw-alias-label-secondary)}.kb-search{min-width:120px;flex:0 1 auto;padding:5px 10px;border-radius:6px;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font-size:12px;outline:none}.kb-bulk{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--dsw-alias-bg-layer-1);border-bottom:1px solid var(--dsw-alias-border-l1);font-size:12px;color:var(--dsw-alias-label-secondary)}.kb-check{position:absolute;top:6px;left:6px;width:18px;height:18px;border:1px solid var(--dsw-alias-border-l2);border-radius:4px;display:flex;align-items:center;justify-content:center;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-brand-primary);font-size:12px;z-index:4}.kb-card.sel{background:var(--dsw-alias-bg-layer-2);border-color:var(--dsw-alias-brand-primary)}.kb-rowcheck{display:inline-block;width:16px;margin-right:4px;color:var(--dsw-alias-brand-primary);font-weight:700}.kb-list tr.sel td{background:var(--dsw-alias-bg-layer-2)}';
 				document.head.appendChild(tag);
 			}
 
@@ -259,6 +259,9 @@ window.__ModuleLoader__.load({
 				const [confirmKey, setConfirmKey] = React.useState('');
 				const [menu, setMenu] = React.useState(null);
 				const [uploading, setUploading] = React.useState(false);
+				const [multiMode, setMultiMode] = React.useState(false);
+				const [selected, setSelected] = React.useState(new Set());
+				const [confirmBulk, setConfirmBulk] = React.useState(false);
 				const [dragActive, setDragActive] = React.useState(false);
 				const [dragInfo, setDragInfo] = React.useState(null);
 				const dragDepth = React.useRef(0);
@@ -337,6 +340,19 @@ window.__ModuleLoader__.load({
 						setConfirmKey(''); setMenu(null); loadList();
 					}).catch((e) => { setNotice('删除失败：' + String(e && e.message || e)); setConfirmKey(''); setMenu(null); });
 				};
+				const toggleSel = (item) => { if (item.isFolder) return; setSelected((prev) => { const next = new Set(prev); if (next.has(item.key)) next.delete(item.key); else next.add(item.key); return next; }); };
+				const selectableAll = (arr) => arr.filter((x) => !x.isFolder);
+				const allFilesSelected = (arr) => { const fs = selectableAll(arr); return fs.length > 0 && fs.every((x) => selected.has(x.key)); };
+				const toggleAllSelected = (arr) => { const fs = selectableAll(arr); setSelected(allFilesSelected(arr) ? new Set() : new Set(fs.map((x) => x.key))); };
+				const doBulkDelete = () => {
+					if (!sel || !selected.size) return;
+					const targets = allSelectable.filter((x) => selected.has(x.key));
+					if (!targets.length) { setNotice('未选中可删除的文件'); return; }
+					setNotice('');
+					let done = 0, bad = 0, err = '';
+					const jobs = targets.map((item) => api('remove', { bucket: sel.name, key: item.key }).then((r) => { if (r && r.ok) done++; else { bad++; if (!err) err = (r && r.error) || '删除失败'; } }));
+					Promise.all(jobs).then(() => { setNotice(done + ' 个已删除' + (bad ? '，' + bad + ' 个失败' + (err ? '（' + err + '）' : '') : '')); setMultiMode(false); setSelected(new Set()); setConfirmBulk(false); loadList(); });
+				};
 
 				const sortLabels = { name: '名称', size: '大小', time: '时间' };
 				const cycleSortField = () => setSortKey(sortKey === 'name' ? 'size' : sortKey === 'size' ? 'time' : 'name');
@@ -380,6 +396,7 @@ window.__ModuleLoader__.load({
 						: React.createElement('div', { className: 'kb-status', style: { padding: '8px' } }, '尚未添加 Bucket，点右上角 ➕ '));
 
 				let explorer;
+				let bulkBar = null;
 				if (!sel) {
 					explorer = React.createElement('div', { className: 'kb-empty' }, '选择左侧 Bucket 开始浏览');
 				} else {
@@ -397,28 +414,36 @@ window.__ModuleLoader__.load({
 							React.createElement('button', { className: 'kb-mini', title: '切换升降序', onClick: () => setSortDir(sortDir === 'asc' ? 'desc' : 'asc') }, sortDir === 'asc' ? '↑' : '↓')),
 						React.createElement('div', { className: 'kb-viewtoggle' },
 							React.createElement('button', { className: view === 'icon' ? 'on' : '', onClick: () => { setMenu(null); setConfirmKey(''); setView('icon'); } }, '图标'),
-							React.createElement('button', { className: view === 'list' ? 'on' : '', onClick: () => { setMenu(null); setConfirmKey(''); setView('list'); } }, '列表')));
+							React.createElement('button', { className: view === 'list' ? 'on' : '', onClick: () => { setMenu(null); setConfirmKey(''); setView('list'); } }, '列表')),
+						React.createElement('button', { className: 'kb-mini' + (multiMode ? ' on' : ''), title: '多选', onClick: () => { setMultiMode(!multiMode); setSelected(new Set()); setConfirmBulk(false); setMenu(null); } }, multiMode ? '退出多选' : '多选'));
 					if (listErr) explorer = React.createElement('div', { className: 'kb-empty' }, '加载失败：' + listErr);
 					else if (!list) explorer = React.createElement('div', { className: 'kb-empty' }, '加载中…');
 					else {
 						const folders = list.folders.map((k) => ({ isFolder: true, key: k, name: k.split('/').filter(Boolean).pop(), type: 'folder' }));
 						const files = list.files;
 						const base = folders.concat(files);
+						const allSelectable = selectableAll(base);
 						const all = sortAll(search ? base.filter((item) => String(item.name || '').toLowerCase().indexOf(search.toLowerCase()) !== -1 || String(item.type || '').toLowerCase().indexOf(search.toLowerCase()) !== -1) : base);
+						bulkBar = multiMode ? React.createElement('div', { className: 'kb-bulk' },
+							React.createElement('span', null, '已选 ' + selected.size + ' 项'),
+							React.createElement('button', { className: 'kb-mini', onClick: () => toggleAllSelected(all) }, allFilesSelected(all) ? '取消全选' : '全选'),
+							confirmBulk ? React.createElement('button', { className: 'kb-mini kb-mini-danger', onClick: doBulkDelete }, '确认删除') : React.createElement('button', { className: 'kb-mini kb-mini-danger', onClick: () => setConfirmBulk(true) }, '删除选中'))
+						: null;
 						const menuBtn = (item) => React.createElement('button', { className: 'kb-corner-btn', title: '更多', onClick: (e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); if (menu && menu.key === item.key) setMenu(null); else setMenu({ key: item.key, item: item, pos: { left: r.right, top: r.bottom + 4 } }); } }, IconMore);
 						const nameEl = (name) => { const np = nameParts(name); return React.createElement('span', { className: 'kb-card-name' }, React.createElement('span', { className: 'kb-card-base' }, np.base), np.ext ? React.createElement('span', { className: 'kb-card-ext' }, np.ext) : null); };
 						if (!all.length) explorer = React.createElement('div', { className: 'kb-empty' }, '空目录');
 						else if (view === 'icon') {
-							explorer = React.createElement('div', { className: 'kb-grid' }, all.map((item) => React.createElement('div', { key: item.isFolder ? item.key : 'f:' + item.key, className: 'kb-card', onClick: () => openFile(item) },
+							explorer = React.createElement('div', { className: 'kb-grid' }, all.map((item) => React.createElement('div', { key: item.isFolder ? item.key : 'f:' + item.key, className: 'kb-card' + (selected.has(item.key) ? ' sel' : '') + (multiMode ? ' multi' : ''), onClick: () => { if (multiMode) { if (!item.isFolder) toggleSel(item); } else openFile(item); } },
+								(!item.isFolder && multiMode) ? React.createElement('div', { className: 'kb-check' }, selected.has(item.key) ? React.createElement('span', null, '✓') : null) : null,
 								React.createElement('div', { className: 'kb-cardIcon' + (item.isFolder ? ' folder' : '') }, item.isFolder ? IconFolder : fileIcon(item)),
 								nameEl(item.name),
-								item.isFolder ? null : React.createElement('div', { className: 'kb-card-corner' }, menuBtn(item)))));
+								(!item.isFolder && !multiMode) ? React.createElement('div', { className: 'kb-card-corner' }, menuBtn(item)) : null)));
 						} else {
 							explorer = React.createElement('div', { className: 'kb-list' }, React.createElement('table', null,
 								React.createElement('thead', null, React.createElement('tr', null, React.createElement('th', null, '名称'), React.createElement('th', null, '类型'), React.createElement('th', null, '大小'), React.createElement('th', null, '修改时间'), React.createElement('th', null, '操作'))),
-								React.createElement('tbody', null, all.map((item) => React.createElement('tr', { key: item.isFolder ? item.key : 'f:' + item.key, onClick: () => openFile(item), style: { cursor: 'pointer' } },
-									React.createElement('td', null, nameEl(item.name)), React.createElement('td', null, item.isFolder ? '文件夹' : (item.type || '-')), React.createElement('td', null, item.isFolder ? '-' : formatSize(item.size)), React.createElement('td', null, formatTime(item.lastModified)),
-									React.createElement('td', null, item.isFolder ? null : menuBtn(item)))))));
+								React.createElement('tbody', null, all.map((item) => React.createElement('tr', { key: item.isFolder ? item.key : 'f:' + item.key, className: selected.has(item.key) ? 'sel' : '', onClick: () => { if (multiMode) { if (!item.isFolder) toggleSel(item); } else openFile(item); }, style: { cursor: 'pointer' } },
+									React.createElement('td', null, (multiMode && !item.isFolder) ? React.createElement('span', { className: 'kb-rowcheck' }, selected.has(item.key) ? '✓' : '') : null, nameEl(item.name)), React.createElement('td', null, item.isFolder ? '文件夹' : (item.type || '-')), React.createElement('td', null, item.isFolder ? '-' : formatSize(item.size)), React.createElement('td', null, formatTime(item.lastModified)),
+									React.createElement('td', null, (!item.isFolder && !multiMode) ? menuBtn(item) : null))))));
 						}
 					}
 					const dropdown = menu && menu.item ? ReactDOM.createPortal(React.createElement('div', { className: 'kb-menu-fixed', style: { left: menu.pos.left, top: menu.pos.top }, onClick: (e) => e.stopPropagation() },
@@ -435,7 +460,7 @@ window.__ModuleLoader__.load({
 						React.createElement('div', { className: 'kb-drop-sub' }, sel ? ('上传到：' + sel.name + (prefix ? '/' + prefix : '')) : '选择 Bucket 后即可拖放上传'),
 						React.createElement('div', { className: 'kb-drop-limit' }, '最多 ' + MAX_FILES + ' 个文件，单个不超过 20MB')
 					) : null;
-					explorer = React.createElement('div', { className: 'kb-explorer', onDragEnter, onDragOver, onDragLeave, onDrop }, toolbar, notice ? React.createElement('div', { className: 'kb-notice' }, notice) : null, explorer, dropdown, dropOverlay);
+					explorer = React.createElement('div', { className: 'kb-explorer', onDragEnter, onDragOver, onDragLeave, onDrop }, toolbar, bulkBar, notice ? React.createElement('div', { className: 'kb-notice' }, notice) : null, explorer, dropdown, dropOverlay);
 				}
 
 				return React.createElement('div', { className: 'kb-root' },
