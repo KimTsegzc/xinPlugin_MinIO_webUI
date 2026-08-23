@@ -1,0 +1,31 @@
+{
+  "name": "xin-plugin-minio-webui",
+  "version": "1.0.0",
+  "description": "DSH 知识库文件管理插件（MinIO 浏览/预览），挂载包：左侧栏底部 Knowledge Base 入口 + 资源管理器面板。",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/client.js"
+  ],
+  "dsh": {
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "dsh-better-sidebar"
+      ]
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "react": "^18.2.0",
+    "dsh-better-sidebar": ">=0.4.0"
+  },
+  "license": "MIT"
+}
