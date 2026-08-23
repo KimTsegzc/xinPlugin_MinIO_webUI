@@ -4,6 +4,7 @@ window.__ModuleLoader__.load({
 		var module = { exports: {} };
 		var exports = module.exports;
 		let React = require('react');
+		let ReactDOM = require('react-dom');
 
 		const inject = ['betterSidebar'];
 
@@ -47,7 +48,7 @@ window.__ModuleLoader__.load({
 			if (typeof document !== 'undefined' && document.head && !document.getElementById('minio-kb-css')) {
 				const tag = document.createElement('style');
 				tag.id = 'minio-kb-css';
-				tag.textContent = CSS + '.kb-tree{width:150px}.kb-menu-wrap{position:relative;display:inline-block}.kb-menu{position:absolute;right:0;top:calc(100% + 4px);background:var(--dsw-alias-bg-overlay);border:1px solid var(--dsw-alias-border-l1);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.25);min-width:120px;z-index:50;overflow:hidden}.kb-menu-item{display:block;width:100%;text-align:left;padding:8px 12px;border:none;background:transparent;color:var(--dsw-alias-label-primary);cursor:pointer;font-size:13px}.kb-menu-item:hover{background:var(--dsw-alias-bg-layer-2)}.kb-menu-danger{color:var(--dsw-alias-state-error-primary)}.kb-toolbar-actions{display:flex;align-items:center;gap:6px}.kb-mini{padding:3px 8px;border-radius:6px;border:1px solid var(--dsw-alias-border-l2);background:transparent;color:var(--dsw-alias-label-primary);cursor:pointer;font-size:12px;line-height:1.2}.kb-mini:hover{background:var(--dsw-alias-bg-layer-2)}.kb-mini-danger{color:var(--dsw-alias-state-error-primary)}.kb-card-actions{display:flex;gap:4px;margin-top:4px;justify-content:center}.kb-actions{display:inline-flex;gap:6px}.kb-notice{padding:6px 12px;font-size:12px;color:var(--dsw-alias-label-secondary)}';
+				tag.textContent = CSS + '.kb-tree{width:150px}.kb-menu-wrap{position:relative;display:inline-block}.kb-menu{position:absolute;right:0;top:calc(100% + 4px);background:var(--dsw-alias-bg-overlay);border:1px solid var(--dsw-alias-border-l1);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.25);min-width:120px;z-index:50;overflow:hidden}.kb-menu-item{display:block;width:100%;text-align:left;padding:8px 12px;border:none;background:transparent;color:var(--dsw-alias-label-primary);cursor:pointer;font-size:13px}.kb-menu-item:hover{background:var(--dsw-alias-bg-layer-2)}.kb-menu-danger{color:var(--dsw-alias-state-error-primary)}.kb-toolbar-actions{display:flex;align-items:center;gap:6px}.kb-mini{padding:3px 8px;border-radius:6px;border:1px solid var(--dsw-alias-border-l2);background:transparent;color:var(--dsw-alias-label-primary);cursor:pointer;font-size:12px;line-height:1.2}.kb-mini:hover{background:var(--dsw-alias-bg-layer-2)}.kb-mini-danger{color:var(--dsw-alias-state-error-primary)}.kb-card-actions{display:flex;gap:4px;margin-top:4px;justify-content:center}.kb-actions{display:inline-flex;gap:6px}.kb-notice{padding:6px 12px;font-size:12px;color:var(--dsw-alias-label-secondary)}.kb-card{position:relative}.kb-card-corner{position:absolute;top:6px;right:6px;z-index:5}.kb-corner-btn{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;padding:0;border-radius:6px;border:1px solid var(--dsw-alias-border-l2);background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer}.kb-corner-btn:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}.kb-menu-fixed{position:fixed;z-index:1000;transform:translateX(-100%);background:var(--dsw-alias-bg-overlay);border:1px solid var(--dsw-alias-border-l1);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.25);min-width:120px;overflow:hidden}';
 				document.head.appendChild(tag);
 			}
 
@@ -185,11 +186,17 @@ window.__ModuleLoader__.load({
 				const [addOpen, setAddOpen] = React.useState(false);
 				const [preview, setPreview] = React.useState(null);
 				const [confirmKey, setConfirmKey] = React.useState('');
-				const [menuKey, setMenuKey] = React.useState('');
+				const [menu, setMenu] = React.useState(null);
 				const [uploading, setUploading] = React.useState(false);
 
 				const loadState = () => api('getState', {}).then((r) => { if (r && r.ok) setState(r.state); else setListErr((r && r.error) || '加载失败'); }).catch((e) => setListErr(String(e && e.message || e)));
 				React.useEffect(() => { loadState(); }, []);
+				React.useEffect(() => {
+					if (!menu) return undefined;
+					const onDoc = () => setMenu(null);
+					document.addEventListener('click', onDoc);
+					return () => document.removeEventListener('click', onDoc);
+				}, [menu]);
 
 				const loadList = () => {
 					if (!sel) { setList(null); return; }
@@ -222,7 +229,7 @@ window.__ModuleLoader__.load({
 
 				const doReference = (item) => {
 					// 引用：V1.2 暂以文件预览承载，完整「引用到 DSH 对话/附件」见 V2。
-					setMenuKey('');
+					setMenu(null);
 					if (sel) setPreview(item);
 				};
 				const doDownload = (item) => {
@@ -238,8 +245,8 @@ window.__ModuleLoader__.load({
 					setNotice('');
 					api('remove', { bucket: sel.name, key: item.key }).then((r) => {
 						setNotice(r && r.ok ? '已删除 ' + item.name : ((r && r.error) || '删除失败'));
-						setConfirmKey(''); loadList();
-					}).catch((e) => { setNotice('删除失败：' + String(e && e.message || e)); setConfirmKey(''); });
+						setConfirmKey(''); setMenu(null); loadList();
+					}).catch((e) => { setNotice('删除失败：' + String(e && e.message || e)); setConfirmKey(''); setMenu(null); });
 				};
 
 				const crumbs = [];
@@ -281,40 +288,38 @@ window.__ModuleLoader__.load({
 								React.createElement('span', { className: 'kb-crumb-sep' }, ' / '),
 								React.createElement('span', { className: 'kb-crumb', onClick: () => setPrefix(c.prefix) }, c.label)))),
 						React.createElement('div', { className: 'kb-viewtoggle' },
-							React.createElement('button', { className: view === 'icon' ? 'on' : '', onClick: () => setView('icon') }, '图标'),
-							React.createElement('button', { className: view === 'list' ? 'on' : '', onClick: () => setView('list') }, '列表')));
+							React.createElement('button', { className: view === 'icon' ? 'on' : '', onClick: () => { setMenu(null); setConfirmKey(''); setView('icon'); } }, '图标'),
+							React.createElement('button', { className: view === 'list' ? 'on' : '', onClick: () => { setMenu(null); setConfirmKey(''); setView('list'); } }, '列表')));
 					if (listErr) explorer = React.createElement('div', { className: 'kb-empty' }, '加载失败：' + listErr);
 					else if (!list) explorer = React.createElement('div', { className: 'kb-empty' }, '加载中…');
 					else {
 						const folders = list.folders.map((k) => ({ isFolder: true, key: k, name: k.split('/').filter(Boolean).pop(), type: 'folder' }));
 						const files = list.files;
 						const all = folders.concat(files);
-						const actions = (item) => item.isFolder ? null : React.createElement('div', { className: 'kb-menu-wrap' },
-							React.createElement('button', { className: 'kb-mini', title: '更多', onClick: (e) => { e.stopPropagation(); setMenuKey(menuKey === item.key ? null : item.key); } }, IconMore),
-							menuKey === item.key ? React.createElement('div', { className: 'kb-menu', onClick: (e) => e.stopPropagation() },
-								React.createElement('button', { className: 'kb-menu-item', onClick: () => { doReference(item); setMenuKey(null); } }, '引用'),
-								React.createElement('button', { className: 'kb-menu-item', onClick: () => { openFile(item); setMenuKey(null); } }, '预览'),
-								React.createElement('button', { className: 'kb-menu-item', onClick: () => { doDownload(item); setMenuKey(null); } }, '下载'),
-								confirmKey === item.key
-									? React.createElement('button', { className: 'kb-menu-item kb-menu-danger', onClick: () => { doDelete(item); setMenuKey(null); } }, '确认删除')
-									: React.createElement('button', { className: 'kb-menu-item kb-menu-danger', onClick: () => { setConfirmKey(item.key); } }, '删除')
-							) : null);
+						const menuBtn = (item) => React.createElement('button', { className: 'kb-corner-btn', title: '更多', onClick: (e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); if (menu && menu.key === item.key) setMenu(null); else setMenu({ key: item.key, item: item, pos: { left: r.right, top: r.bottom + 4 } }); } }, IconMore);
 						if (!all.length) explorer = React.createElement('div', { className: 'kb-empty' }, '空目录');
 						else if (view === 'icon') {
 							explorer = React.createElement('div', { className: 'kb-grid', onDragOver, onDrop }, all.map((item) => React.createElement('div', { key: item.isFolder ? item.key : 'f:' + item.key, className: 'kb-card', onClick: () => openFile(item) },
 								React.createElement('div', { className: 'kb-cardIcon' + (item.isFolder ? ' folder' : '') }, item.isFolder ? IconFolder : IconFile),
 								React.createElement('span', null, item.name),
-								actions(item))));
+								item.isFolder ? null : React.createElement('div', { className: 'kb-card-corner' }, menuBtn(item)))));
 						} else {
-								explorer = React.createElement('div', { className: 'kb-list', onDragOver, onDrop }, React.createElement('table', null,
-									React.createElement('thead', null, React.createElement('tr', null, React.createElement('th', null, '名称'), React.createElement('th', null, '类型'), React.createElement('th', null, '大小'), React.createElement('th', null, '修改时间'), React.createElement('th', null, '操作'))),
-									React.createElement('tbody', null, all.map((item) => React.createElement('tr', { key: item.isFolder ? item.key : 'f:' + item.key, onClick: () => openFile(item), style: { cursor: 'pointer' } },
-								React.createElement('td', null, item.name), React.createElement('td', null, item.isFolder ? '文件夹' : (item.type || '-')), React.createElement('td', null, item.isFolder ? '-' : formatSize(item.size)), React.createElement('td', null, formatTime(item.lastModified)),
-								React.createElement('td', null, item.isFolder ? null : actions(item))))))
-								);
+							explorer = React.createElement('div', { className: 'kb-list', onDragOver, onDrop }, React.createElement('table', null,
+								React.createElement('thead', null, React.createElement('tr', null, React.createElement('th', null, '名称'), React.createElement('th', null, '类型'), React.createElement('th', null, '大小'), React.createElement('th', null, '修改时间'), React.createElement('th', null, '操作'))),
+								React.createElement('tbody', null, all.map((item) => React.createElement('tr', { key: item.isFolder ? item.key : 'f:' + item.key, onClick: () => openFile(item), style: { cursor: 'pointer' } },
+									React.createElement('td', null, item.name), React.createElement('td', null, item.isFolder ? '文件夹' : (item.type || '-')), React.createElement('td', null, item.isFolder ? '-' : formatSize(item.size)), React.createElement('td', null, formatTime(item.lastModified)),
+									React.createElement('td', null, item.isFolder ? null : menuBtn(item)))))));
 						}
 					}
-					explorer = React.createElement('div', { className: 'kb-explorer' }, toolbar, notice ? React.createElement('div', { className: 'kb-notice' }, notice) : null, explorer);
+					const dropdown = menu && menu.item ? ReactDOM.createPortal(React.createElement('div', { className: 'kb-menu-fixed', style: { left: menu.pos.left, top: menu.pos.top }, onClick: (e) => e.stopPropagation() },
+						React.createElement('button', { className: 'kb-menu-item', onClick: () => { doReference(menu.item); } }, '引用'),
+						React.createElement('button', { className: 'kb-menu-item', onClick: () => { openFile(menu.item); setMenu(null); } }, '预览'),
+						React.createElement('button', { className: 'kb-menu-item', onClick: () => { doDownload(menu.item); setMenu(null); } }, '下载'),
+						confirmKey === menu.item.key
+							? React.createElement('button', { className: 'kb-menu-item kb-menu-danger', onClick: () => { doDelete(menu.item); } }, '确认删除')
+							: React.createElement('button', { className: 'kb-menu-item kb-menu-danger', onClick: () => { setConfirmKey(menu.item.key); } }, '删除')
+					), document.body) : null;
+					explorer = React.createElement('div', { className: 'kb-explorer' }, toolbar, notice ? React.createElement('div', { className: 'kb-notice' }, notice) : null, explorer, dropdown);
 				}
 
 				return React.createElement('div', { className: 'kb-root' },

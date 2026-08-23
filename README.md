@@ -1,16 +1,18 @@
 # xinPlugin_MinIO_webUI
 
-DSH（DeepSeek Harness）原生融合的 **知识库 / MinIO 文件管理插件** —— V1.2.1
+DSH（DeepSeek Harness）原生融合的 **知识库 / MinIO 文件管理插件** —— V1.3
 
 > 在 DSH 内嵌一个「Knowledge Base」侧边面板（基于 dsh-better-sidebar）：绑定 Bucket → 目录树浏览 → 资源管理器式文件管理（上传/下载/预览/删除 + 更多菜单）。纯插件、零内核侵入，配置本地持久化，不侵入 DSH 数据库。
 
 | 项 | 值 |
 |---|---|
-| 版本 | **1.2.1** |
+| 版本 | **1.3.0** |
 | 日期 | **2026-08-24** |
 | 目标 | Windows（Node/pnpm/DSH 已装，MinIO 已部署） |
 | 依赖 | dsh-better-sidebar（随本仓库提供） |
 
+> 📌 **V1.3 文件下拉菜单优化**：① 下拉单不再被 Buckets 列表/网格裁剪——改用 `ReactDOM.createPortal` 渲染到 `document.body`（`position:fixed`），彻底脱离 `.kb-grid{overflow:auto}` 的裁剪上下文；② 「⋯」移到文件卡片**右上角**（图标/名称上方不再占位）；③ 点击菜单外任意空白自动关闭（document 级 click-outside）；④ 切换图标/列表视图时重置下拉单与「确认删除」状态，不带着切换。
+>
 > 📌 **V1.2.1 修复**：修复「⚙️ 加MinIO配置」点没反应。根因是宿主 half 用 `ctx.get('webServer')` 却未声明 `inject`，在宿主级作用域解析不到服务导致 `apply()` 提前退出、`/minio/api` 路由从未注册（客户端 `getState` 落回 fallback 被 405，`state` 恒为空，配置弹窗因 `configOpen && state` 不渲染）。改为 `export const inject=['webServer']` + `ctx.webServer` 注册（同 client-connection 标准写法），`fs`/`subprocess` 改用 Node 内建 `node:fs` + `node:child_process` 兜底，`baseDir` 固定为部署目录；客户端 `api()` 改为防御式（非 2xx/空 body 返回结构化错误）。
 
 ---
