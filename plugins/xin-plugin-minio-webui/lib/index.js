@@ -37,6 +37,9 @@ export function apply(ctx) {
     region: 'us-east-1',
     ssl: false,
     buckets: [],
+    // 联动 Chroma 向量入库（可选）：上传成功后调用 ingest.py 抽文本入库。
+    chromaPython: 'python',
+    chromaIngestScript: 'C:/Users/kimtse/.dsh/xinPlugin_Chroma_fastMCP/ingest.py',
   }
 
   // 启动标记：用于事后确认宿主 half 是否执行、服务是否解析到。
@@ -218,6 +221,16 @@ export function apply(ctx) {
     return ['-H', 'Authorization: ' + authorization, '-H', 'x-amz-content-sha256: ' + payloadHash, '-H', 'x-amz-date: ' + amzDate]
   }
   async function fileSha256(p) { return sha256Hex(await nodeFs.readFile(p)) }
+  // 联动 Chroma 向量入库：上传成功后调用 ingest.py（抽文本→分块→向量入库）。
+  async function runIngest(state, localFile, sourceName) {
+    const py = String(state.chromaPython || 'python')
+    const script = String(state.chromaIngestScript || '')
+    if (!script) return { skipped: true }
+    const res = await run([py, script, localFile, sourceName], { graceMs: 180000 })
+    let parsed = null
+    try { parsed = JSON.parse(String(res.stdout || '').trim()) } catch (e) { /* not json */ }
+    return { exitCode: res.exitCode, parsed, stderr: String(res.stderr || '').slice(0, 300) }
+  }
   function decodeXml(s) {
     return String(s).replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&')
   }
@@ -393,8 +406,10 @@ export function apply(ctx) {
         const payloadHash = await fileSha256(UP_BIN)
         const up = await run([CURL, '-s', '-S', '-f', '-X', 'PUT', '--data-binary', '@' + UP_BIN, '-H', 'Content-Type: ' + contentType].concat(authHeaderArgs(state, 'PUT', objectUrl(state, bucket, key), payloadHash), [objectUrl(state, bucket, key)]))
         if (up.exitCode !== 0) return { ok: false, error: friendlyError(up.stderr) + ' (exit ' + up.exitCode + ')' }
+        let ingested = null
+        try { ingested = await runIngest(state, UP_BIN, safe) } catch (e) { ingested = { error: String((e && e.message) || e) } }
         await cleanupTemp()
-        return { ok: true, key, name: safe }
+        return { ok: true, key, name: safe, ingested }
       } catch (err) { return { ok: false, error: String((err && err.message) || err) } }
     },
     async remove(payload) {

@@ -1,15 +1,17 @@
 # xinPlugin_MinIO_webUI
 
-DSH（DeepSeek Harness）原生融合的 **知识库 / MinIO 文件管理插件** —— V2.9.1
+DSH（DeepSeek Harness）原生融合的 **知识库 / MinIO 文件管理插件** —— V3.0
 
 > 在 DSH 内嵌一个「Knowledge Base」侧边面板（基于 dsh-better-sidebar）：绑定 Bucket → 目录树浏览 → 资源管理器式文件管理（上传/下载/预览/删除 + 更多菜单）。纯插件、零内核侵入，配置本地持久化，不侵入 DSH 数据库。
 
 | 项 | 值 |
 |---|---|
-| 版本 | **2.9.1** |
+| 版本 | **3.0.0** |
 | 日期 | **2026-08-24** |
 | 目标 | Windows（Node/pnpm/DSH 已装，MinIO 已部署） |
 | 依赖 | dsh-better-sidebar（随本仓库提供） |
+
+> 📌 **V3.0 联动 Chroma 向量入库**（⚠️ 宿主改动，需重启 dsh web 生效）：上传成功后自动调用 Chroma 知识库的 `ingest.py` 抽文本入库（配置项 `chromaIngestScript`/`chromaPython`，可关）。配合 [xinPlugin_Chroma_fastMCP](https://github.com/KimTsegzc/xinPlugin_Chroma_fastMCP) 与 `standard-chroma` agent preset，实现「MinIO 上传 → 向量入库 → DSH 问答直接检索原文（含文件/页码/行号出处）」。
 
 > 📌 **V2.9.1 补丁**：修复文件卡片「⋯ / 多选勾选框与文件图标重合」——卡片顶部内边距加大到 32px，图标下移避开右上/左上角标；并修复列表视图多选时勾选 ✓ 与文件名分两行的布局（包进同一 flex 行）。
 >
