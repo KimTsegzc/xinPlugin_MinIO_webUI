@@ -1,16 +1,18 @@
 # xinPlugin_MinIO_webUI
 
-DSH（DeepSeek Harness）原生融合的 **知识库 / MinIO 文件管理插件** —— V2.9
+DSH（DeepSeek Harness）原生融合的 **知识库 / MinIO 文件管理插件** —— V2.9.1
 
 > 在 DSH 内嵌一个「Knowledge Base」侧边面板（基于 dsh-better-sidebar）：绑定 Bucket → 目录树浏览 → 资源管理器式文件管理（上传/下载/预览/删除 + 更多菜单）。纯插件、零内核侵入，配置本地持久化，不侵入 DSH 数据库。
 
 | 项 | 值 |
 |---|---|
-| 版本 | **2.9.0** |
+| 版本 | **2.9.1** |
 | 日期 | **2026-08-24** |
 | 目标 | Windows（Node/pnpm/DSH 已装，MinIO 已部署） |
 | 依赖 | dsh-better-sidebar（随本仓库提供） |
 
+> 📌 **V2.9.1 补丁**：修复文件卡片「⋯ / 多选勾选框与文件图标重合」——卡片顶部内边距加大到 32px，图标下移避开右上/左上角标；并修复列表视图多选时勾选 ✓ 与文件名分两行的布局（包进同一 flex 行）。
+>
 > 📌 **V2.9 配置**（⚠️ 宿主改动，需重启 dsh web 生效）：① SSL 细化——`https://` 端点自动加 `-k`（自签名证书）；② 配置密钥加密存储——`secretKey` 用 AES-256-GCM 加密落盘（密钥由本机 hostname+盐派生，同机可解、异机不可解），明文旧配置向后兼容、保存后自动转加密。
 >
 > 📌 **V2.8 密钥安全（SigV4 自实现）**（⚠️ 宿主改动，需重启 dsh web 生效）：不再用 `curl --aws-sigv4 --user ak:sk`（密钥暴露在进程命令行）。改为 Node `crypto` 进程内自实现 AWS SigV4 签名，密钥永不进命令行。
