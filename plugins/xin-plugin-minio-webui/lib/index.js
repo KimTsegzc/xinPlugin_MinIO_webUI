@@ -82,6 +82,11 @@ export function apply(ctx) {
 
   function run(argv, opt) {
     const o = opt || {}
+    // 环境里有 HTTP_PROXY(127.0.0.1:7890)，curl 会走代理；代理会挂起 SigV4 ListObjects。
+    // 所有 MinIO 请求一律 `--noproxy *` 直连（certutil 不走）。
+    if (argv && argv[0] === CURL && argv.indexOf('--noproxy') === -1) {
+      argv = argv.slice(0, 1).concat(['--noproxy', '*'], argv.slice(1))
+    }
     if (subprocessSvc && typeof subprocessSvc.spawn === 'function') return runService(argv, o)
     return runNode(argv, o)
   }
