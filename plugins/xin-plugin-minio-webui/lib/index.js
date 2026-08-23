@@ -55,6 +55,23 @@ export function apply(ctx) {
     writeText: async (p, t) => { await nodeFs.writeFile(p, t, 'utf8') },
   }
 
+  // 清理上传/下载产生的临时文件（.minio-*.bin/.b64），避免残留占用磁盘。
+  async function cleanupTemp() {
+    for (const p of [UP_B64, UP_BIN, DL_BIN, DL_B64]) {
+      try { await nodeFs.unlink(p) } catch (e) { /* ignore */ }
+    }
+  }
+  function friendlyError(stderr) {
+    const s = String(stderr || '')
+    if (s.indexOf('could not resolve host') !== -1 || s.indexOf('Could not resolve') !== -1) return '无法解析 MinIO 端点地址'
+    if (s.indexOf('Failed to connect') !== -1 || s.indexOf('Connection refused') !== -1) return '无法连接 MinIO 端点'
+    if (s.indexOf('timed out') !== -1 || s.indexOf('Timeout') !== -1) return '连接 MinIO 超时'
+    if (s.indexOf('SignatureDoesNotMatch') !== -1) return '签名校验失败，请检查 AccessKey/SecretKey/Region'
+    if (s.indexOf('AccessDenied') !== -1 || s.indexOf('403') !== -1) return '访问被拒绝，请检查凭据与桶权限'
+    if (s.indexOf('NoSuchBucket') !== -1) return 'Bucket 不存在'
+    return s.trim()
+  }
+
   async function readState() {
     try {
       const t = await fs.resolve(STATE_PATH)
@@ -83,9 +100,11 @@ export function apply(ctx) {
   function run(argv, opt) {
     const o = opt || {}
     // 环境里有 HTTP_PROXY(127.0.0.1:7890)，curl 会走代理；代理会挂起 SigV4 ListObjects。
-    // 所有 MinIO 请求一律 `--noproxy *` 直连（certutil 不走）。
+    // 所有 MinIO 请求一律 `--noproxy *` 直连（certutil 不走），并加连接/总超时防挂死。
     if (argv && argv[0] === CURL && argv.indexOf('--noproxy') === -1) {
-      argv = argv.slice(0, 1).concat(['--noproxy', '*'], argv.slice(1))
+      const extra = ['--noproxy', '*', '--connect-timeout', '5', '--max-time', '180']
+      if (o.retries) extra.push('--retry', String(o.retries), '--retry-connrefused', '--retry-delay', '1')
+      argv = argv.slice(0, 1).concat(extra, argv.slice(1))
     }
     if (subprocessSvc && typeof subprocessSvc.spawn === 'function') return runService(argv, o)
     return runNode(argv, o)
@@ -213,8 +232,8 @@ export function apply(ctx) {
       try {
         const cfg = (payload && payload.config) ? payload.config : await readState()
         const ep = String(cfg.endpoint || '').replace(/\/+$/, '')
-        const res = await run([CURL, '-s', '-S'].concat(sigArgs(cfg), [ep + '/']))
-        if (res.exitCode !== 0) return { ok: false, error: (res.stderr || '') + ' (exit ' + res.exitCode + ')' }
+        const res = await run([CURL, '-s', '-S'].concat(sigArgs(cfg), [ep + '/']), { retries: 2 })
+        if (res.exitCode !== 0) return { ok: false, error: friendlyError(res.stderr) + ' (exit ' + res.exitCode + ')' }
         const xml = res.stdout
         const e = xmlError(xml)
         if (e) return { ok: false, error: e, detail: xml.slice(0, 500) }
@@ -226,11 +245,11 @@ export function apply(ctx) {
         const state = await readState()
         const name = String((payload && payload.name) || '')
         if (!name) return { ok: false, error: 'no bucket name' }
-        const res = await run([CURL, '-s', '--head', '-o', 'NUL', '-w', '%{http_code}'].concat(sigArgs(state), [bucketUrl(state, name)]))
+        const res = await run([CURL, '-s', '--head', '-o', 'NUL', '-w', '%{http_code}'].concat(sigArgs(state), [bucketUrl(state, name)]), { retries: 2 })
         const code = (res.stdout || '').trim()
         if (code === '200') return { ok: true, exists: true }
         if (code === '404') return { ok: true, exists: false }
-        return { ok: false, error: (res.stderr || '') + ' (http ' + code + ')' }
+        return { ok: false, error: friendlyError(res.stderr) + ' (http ' + code + ')' }
       } catch (err) { return { ok: false, error: String((err && err.message) || err) } }
     },
     async addBucket(payload) {
@@ -260,8 +279,8 @@ export function apply(ctx) {
         const prefix = (payload && payload.prefix) ? String(payload.prefix) : ''
         if (!bucket) return { ok: false, error: 'no bucket' }
         const url = bucketUrl(state, bucket) + '?list-type=2&delimiter=/' + (prefix ? '&prefix=' + encodeURIComponent(prefix) : '')
-        const res = await run([CURL, '-s', '-S'].concat(sigArgs(state), [url]))
-        if (res.exitCode !== 0) return { ok: false, error: (res.stderr || '') + ' (exit ' + res.exitCode + ')' }
+        const res = await run([CURL, '-s', '-S'].concat(sigArgs(state), [url]), { retries: 2 })
+        if (res.exitCode !== 0) return { ok: false, error: friendlyError(res.stderr) + ' (exit ' + res.exitCode + ')' }
         const xml = res.stdout
         const e = xmlError(xml)
         if (e) return { ok: false, error: e, detail: xml.slice(0, 500) }
@@ -275,10 +294,11 @@ export function apply(ctx) {
         const bucket = String((payload && payload.bucket) || '')
         const key = String((payload && payload.key) || '')
         if (!bucket || !key) return { ok: false, error: 'no bucket/key' }
-        const dl = await run([CURL, '-s', '-S', '-f', '-o', DL_BIN].concat(sigArgs(state), [objectUrl(state, bucket, key)]))
-        if (dl.exitCode !== 0) return { ok: false, error: (dl.stderr || '') + ' (exit ' + dl.exitCode + ')' }
+        const dl = await run([CURL, '-s', '-S', '-f', '-o', DL_BIN].concat(sigArgs(state), [objectUrl(state, bucket, key)]), { retries: 2 })
+        if (dl.exitCode !== 0) return { ok: false, error: friendlyError(dl.stderr) + ' (exit ' + dl.exitCode + ')' }
         const t = await fs.resolve(DL_BIN)
         const txt = await fs.readText(t)
+        await cleanupTemp()
         return { ok: true, name: key.split('/').pop(), text: txt }
       } catch (err) { return { ok: false, error: String((err && err.message) || err) } }
     },
@@ -288,13 +308,14 @@ export function apply(ctx) {
         const bucket = String((payload && payload.bucket) || '')
         const key = String((payload && payload.key) || '')
         if (!bucket || !key) return { ok: false, error: 'no bucket/key' }
-        const dl = await run([CURL, '-s', '-S', '-f', '-o', DL_BIN].concat(sigArgs(state), [objectUrl(state, bucket, key)]))
-        if (dl.exitCode !== 0) return { ok: false, error: (dl.stderr || '') + ' (exit ' + dl.exitCode + ')' }
+        const dl = await run([CURL, '-s', '-S', '-f', '-o', DL_BIN].concat(sigArgs(state), [objectUrl(state, bucket, key)]), { retries: 2 })
+        if (dl.exitCode !== 0) return { ok: false, error: friendlyError(dl.stderr) + ' (exit ' + dl.exitCode + ')' }
         const enc = await run([CERTUTIL, '-f', '-encode', DL_BIN, DL_B64])
         if (enc.exitCode !== 0) return { ok: false, error: 'encode failed: ' + (enc.stderr || enc.stdout || 'exit ' + enc.exitCode) }
         const t = await fs.resolve(DL_B64)
         const txt = await fs.readText(t)
         const b64 = txt.split(/\r?\n/).filter((l) => l && l.indexOf('-----') !== 0).join('')
+        await cleanupTemp()
         return { ok: true, name: key.split('/').pop(), base64: b64, contentType: guessType(key) }
       } catch (err) { return { ok: false, error: String((err && err.message) || err) } }
     },
@@ -315,7 +336,8 @@ export function apply(ctx) {
         const dec = await run([CERTUTIL, '-f', '-decode', UP_B64, UP_BIN])
         if (dec.exitCode !== 0) return { ok: false, error: 'decode failed: ' + (dec.stderr || dec.stdout || 'exit ' + dec.exitCode) }
         const up = await run([CURL, '-s', '-S', '-f', '-X', 'PUT', '--data-binary', '@' + UP_BIN, '-H', 'Content-Type: ' + contentType].concat(sigArgs(state), [objectUrl(state, bucket, key)]))
-        if (up.exitCode !== 0) return { ok: false, error: (up.stderr || '') + ' (exit ' + up.exitCode + ')' }
+        if (up.exitCode !== 0) return { ok: false, error: friendlyError(up.stderr) + ' (exit ' + up.exitCode + ')' }
+        await cleanupTemp()
         return { ok: true, key, name: safe }
       } catch (err) { return { ok: false, error: String((err && err.message) || err) } }
     },
@@ -326,7 +348,7 @@ export function apply(ctx) {
         const key = String((payload && payload.key) || '')
         if (!bucket || !key) return { ok: false, error: 'no bucket/key' }
         const res = await run([CURL, '-s', '-S', '-f', '-X', 'DELETE'].concat(sigArgs(state), [objectUrl(state, bucket, key)]))
-        if (res.exitCode !== 0) return { ok: false, error: (res.stderr || '') + ' (exit ' + res.exitCode + ')' }
+        if (res.exitCode !== 0) return { ok: false, error: friendlyError(res.stderr) + ' (exit ' + res.exitCode + ')' }
         return { ok: true }
       } catch (err) { return { ok: false, error: String((err && err.message) || err) } }
     },
