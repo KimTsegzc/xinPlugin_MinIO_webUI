@@ -1,16 +1,18 @@
 # xinPlugin_MinIO_webUI
 
-DSH（DeepSeek Harness）原生融合的 **知识库 / MinIO 文件管理插件** —— V2.0
+DSH（DeepSeek Harness）原生融合的 **知识库 / MinIO 文件管理插件** —— V2.1
 
 > 在 DSH 内嵌一个「Knowledge Base」侧边面板（基于 dsh-better-sidebar）：绑定 Bucket → 目录树浏览 → 资源管理器式文件管理（上传/下载/预览/删除 + 更多菜单）。纯插件、零内核侵入，配置本地持久化，不侵入 DSH 数据库。
 
 | 项 | 值 |
 |---|---|
-| 版本 | **2.0.0** |
+| 版本 | **2.1.0** |
 | 日期 | **2026-08-24** |
 | 目标 | Windows（Node/pnpm/DSH 已装，MinIO 已部署） |
 | 依赖 | dsh-better-sidebar（随本仓库提供） |
 
+> 📌 **V2.1 预览增强**：`json` 格式化缩进展示；`csv` 表格化（带表头/列宽自适应）；`yaml/xml/log` 及各类代码文件（js/ts/py/go/html/css 等）按文本预览；图片预览扩展 `webp/svg/bmp`；未知/二进制类型降级——显示占位提示并给「下载查看」按钮，不再报错。
+>
 > 📌 **V2.0 文件类型图标**：按扩展名区分图标，替换原先单一的「文档」图标——图片/PDF/Word/Excel/PPT/代码/文本/压缩包/音频/视频/未知 各配独立 SVG 图标与配色；目录保持黄色文件夹。分类：`png,jpg,gif,webp,svg`→图片；`pdf`→PDF；`doc,docx`→Word；`xls,xlsx,csv`→Excel；`ppt,pptx`→PPT；`js,ts,py,go,html,css` 等→代码；`txt,md,yaml,xml,json,log` 等→文本；`zip,rar,7z,tar,gz`→压缩包；音频/视频单独；其余→未知。
 >
 > 📌 **V1.5 文件名过长缩写**：文件卡片/列表的名称过长时不再换行撑高卡片——主名过长自动省略号（`…`），但**始终完整显示后缀**（如 `.pdf`）。实现：名称拆成「主名（可省略）」+「后缀（固定完整）」两个 span，主名用 `text-overflow:ellipsis` 单行裁剪、后缀 `flex:none` 恒显示；列表视图 `table-layout:fixed` 分摊列宽不溢出。两个视图均单行。
