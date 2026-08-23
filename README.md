@@ -1,17 +1,19 @@
 # xinPlugin_MinIO_webUI
 
-DSH（DeepSeek Harness）原生融合的 **知识库 / MinIO 文件管理插件** —— V2.7
+DSH（DeepSeek Harness）原生融合的 **知识库 / MinIO 文件管理插件** —— V2.8
 
 > 在 DSH 内嵌一个「Knowledge Base」侧边面板（基于 dsh-better-sidebar）：绑定 Bucket → 目录树浏览 → 资源管理器式文件管理（上传/下载/预览/删除 + 更多菜单）。纯插件、零内核侵入，配置本地持久化，不侵入 DSH 数据库。
 
 | 项 | 值 |
 |---|---|
-| 版本 | **2.7.0** |
+| 版本 | **2.8.0** |
 | 日期 | **2026-08-24** |
 | 目标 | Windows（Node/pnpm/DSH 已装，MinIO 已部署） |
 | 依赖 | dsh-better-sidebar（随本仓库提供） |
 
-> 📌 **V2.7 宿主稳定**（⚠️ 宿主改动，需重启 dsh web 生效）：① 上传/下载/预览产生的临时文件 `.minio-*.bin/.b64` 用后即清理，不残留磁盘；② 所有 curl 加 `--connect-timeout 5 --max-time 180` 防挂死，GET 类（测试连接/列桶/列对象/读文本/下载）加 `--retry 2 --retry-connrefused` 自动重试；③ 错误信息友好化（无法解析端点/无法连接/超时/签名错误/AccessDenied/桶不存在 等映射为中文提示）。
+> 📌 **V2.8 密钥安全（SigV4 自实现）**（⚠️ 宿主改动，需重启 dsh web 生效）：不再用 `curl --aws-sigv4 --user ak:sk`（密钥暴露在进程命令行）。改为 Node `crypto` 进程内自实现 AWS SigV4 签名，只把 `Authorization / x-amz-content-sha256 / x-amz-date` 头传给 curl，密钥永不进命令行；GET/HEAD/DELETE 用空载荷哈希，PUT 计算文件内容 SHA-256。已用真实 MinIO 验证 GET/列表/PUT/GET 回读/DELETE 全通（含中文文件名路径）。
+>
+> 📌 **V2.7 宿主稳定**（⚠️ 宿主改动，需重启 dsh web 生效）：① 上传/下载/预览产生的临时文件 `.minio-*.bin/.b64` 用后即清理；② 所有 curl 加 `--connect-timeout 5 --max-time 180` 防挂死，GET 类加 `--retry 2 --retry-connrefused` 自动重试；③ 错误信息友好化。
 >
 > 📌 **V2.6 上传进度 + 取消**：上传时工具栏显示「上传中 N/M」+ 进度条（按已完成文件数），并提供「取消」按钮（AbortController 中止未完成请求）；取消/失败均有明确提示。
 >

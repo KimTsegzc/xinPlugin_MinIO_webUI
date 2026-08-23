@@ -3,6 +3,7 @@
 import { promises as nodeFs } from 'node:fs'
 import nodePath from 'node:path'
 import { spawn as nodeSpawn } from 'node:child_process'
+import { createHash, createHmac } from 'node:crypto'
 
 // 用标准 Cordis inject 规范接入 webServer（同 dsh-client-connection 的做法），
 // 避免在宿主作用域里 ctx.get('webServer') 解析不到。
@@ -160,9 +161,33 @@ export function apply(ctx) {
   function objectUrl(cfg, bucket, key) {
     return bucketUrl(cfg, bucket) + '/' + String(key).split('/').map((p) => encodeURIComponent(p)).join('/')
   }
-  function sigArgs(cfg) {
-    return ['--aws-sigv4', 'aws:amz:' + (cfg.region || 'us-east-1') + ':s3', '--user', String(cfg.accessKey || '') + ':' + String(cfg.secretKey || '')]
+  const EMPTY_SHA = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+  function sha256Hex(d) { return createHash('sha256').update(d).digest('hex') }
+  // 自实现 AWS SigV4，密钥只在进程内参与签名，不再经 `--user` 暴露进 curl 命令行。
+  function authHeaderArgs(cfg, method, url, payloadHash) {
+    const u = new URL(url)
+    const region = String(cfg.region || 'us-east-1')
+    const ak = String(cfg.accessKey || '')
+    const sk = String(cfg.secretKey || '')
+    const now = new Date()
+    const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, '')
+    const dateStamp = amzDate.slice(0, 8)
+    const qp = [...u.searchParams.entries()].map(([k, v]) => [encodeURIComponent(k), encodeURIComponent(v)]).sort((a, b) => (a[0] + a[1]).localeCompare(b[0] + b[1]))
+    const query = qp.map(([k, v]) => k + '=' + v).join('&')
+    const canonicalHeaders = 'host:' + u.host + '\n' + 'x-amz-content-sha256:' + payloadHash + '\n' + 'x-amz-date:' + amzDate + '\n'
+    const signedHeaders = 'host;x-amz-content-sha256;x-amz-date'
+    const canonicalRequest = [method, u.pathname, query, canonicalHeaders, signedHeaders, payloadHash].join('\n')
+    const scope = dateStamp + '/' + region + '/s3/aws4_request'
+    const stringToSign = ['AWS4-HMAC-SHA256', amzDate, scope, sha256Hex(canonicalRequest)].join('\n')
+    const kDate = createHmac('sha256', 'AWS4' + sk).update(dateStamp).digest()
+    const kRegion = createHmac('sha256', kDate).update(region).digest()
+    const kService = createHmac('sha256', kRegion).update('s3').digest()
+    const kSigning = createHmac('sha256', kService).update('aws4_request').digest()
+    const signature = createHmac('sha256', kSigning).update(stringToSign).digest('hex')
+    const authorization = 'AWS4-HMAC-SHA256 Credential=' + ak + '/' + scope + ', SignedHeaders=' + signedHeaders + ', Signature=' + signature
+    return ['-H', 'Authorization: ' + authorization, '-H', 'x-amz-content-sha256: ' + payloadHash, '-H', 'x-amz-date: ' + amzDate]
   }
+  async function fileSha256(p) { return sha256Hex(await nodeFs.readFile(p)) }
   function decodeXml(s) {
     return String(s).replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&')
   }
@@ -232,7 +257,7 @@ export function apply(ctx) {
       try {
         const cfg = (payload && payload.config) ? payload.config : await readState()
         const ep = String(cfg.endpoint || '').replace(/\/+$/, '')
-        const res = await run([CURL, '-s', '-S'].concat(sigArgs(cfg), [ep + '/']), { retries: 2 })
+        const res = await run([CURL, '-s', '-S'].concat(authHeaderArgs(cfg, 'GET', ep + '/', EMPTY_SHA), [ep + '/']), { retries: 2 })
         if (res.exitCode !== 0) return { ok: false, error: friendlyError(res.stderr) + ' (exit ' + res.exitCode + ')' }
         const xml = res.stdout
         const e = xmlError(xml)
@@ -245,7 +270,7 @@ export function apply(ctx) {
         const state = await readState()
         const name = String((payload && payload.name) || '')
         if (!name) return { ok: false, error: 'no bucket name' }
-        const res = await run([CURL, '-s', '--head', '-o', 'NUL', '-w', '%{http_code}'].concat(sigArgs(state), [bucketUrl(state, name)]), { retries: 2 })
+        const res = await run([CURL, '-s', '--head', '-o', 'NUL', '-w', '%{http_code}'].concat(authHeaderArgs(state, 'HEAD', bucketUrl(state, name), EMPTY_SHA), [bucketUrl(state, name)]), { retries: 2 })
         const code = (res.stdout || '').trim()
         if (code === '200') return { ok: true, exists: true }
         if (code === '404') return { ok: true, exists: false }
@@ -279,7 +304,7 @@ export function apply(ctx) {
         const prefix = (payload && payload.prefix) ? String(payload.prefix) : ''
         if (!bucket) return { ok: false, error: 'no bucket' }
         const url = bucketUrl(state, bucket) + '?list-type=2&delimiter=/' + (prefix ? '&prefix=' + encodeURIComponent(prefix) : '')
-        const res = await run([CURL, '-s', '-S'].concat(sigArgs(state), [url]), { retries: 2 })
+        const res = await run([CURL, '-s', '-S'].concat(authHeaderArgs(state, 'GET', url, EMPTY_SHA), [url]), { retries: 2 })
         if (res.exitCode !== 0) return { ok: false, error: friendlyError(res.stderr) + ' (exit ' + res.exitCode + ')' }
         const xml = res.stdout
         const e = xmlError(xml)
@@ -294,7 +319,7 @@ export function apply(ctx) {
         const bucket = String((payload && payload.bucket) || '')
         const key = String((payload && payload.key) || '')
         if (!bucket || !key) return { ok: false, error: 'no bucket/key' }
-        const dl = await run([CURL, '-s', '-S', '-f', '-o', DL_BIN].concat(sigArgs(state), [objectUrl(state, bucket, key)]), { retries: 2 })
+        const dl = await run([CURL, '-s', '-S', '-f', '-o', DL_BIN].concat(authHeaderArgs(state, 'GET', objectUrl(state, bucket, key), EMPTY_SHA), [objectUrl(state, bucket, key)]), { retries: 2 })
         if (dl.exitCode !== 0) return { ok: false, error: friendlyError(dl.stderr) + ' (exit ' + dl.exitCode + ')' }
         const t = await fs.resolve(DL_BIN)
         const txt = await fs.readText(t)
@@ -308,7 +333,7 @@ export function apply(ctx) {
         const bucket = String((payload && payload.bucket) || '')
         const key = String((payload && payload.key) || '')
         if (!bucket || !key) return { ok: false, error: 'no bucket/key' }
-        const dl = await run([CURL, '-s', '-S', '-f', '-o', DL_BIN].concat(sigArgs(state), [objectUrl(state, bucket, key)]), { retries: 2 })
+        const dl = await run([CURL, '-s', '-S', '-f', '-o', DL_BIN].concat(authHeaderArgs(state, 'GET', objectUrl(state, bucket, key), EMPTY_SHA), [objectUrl(state, bucket, key)]), { retries: 2 })
         if (dl.exitCode !== 0) return { ok: false, error: friendlyError(dl.stderr) + ' (exit ' + dl.exitCode + ')' }
         const enc = await run([CERTUTIL, '-f', '-encode', DL_BIN, DL_B64])
         if (enc.exitCode !== 0) return { ok: false, error: 'encode failed: ' + (enc.stderr || enc.stdout || 'exit ' + enc.exitCode) }
@@ -335,7 +360,8 @@ export function apply(ctx) {
         await fs.writeText(b64t, base64)
         const dec = await run([CERTUTIL, '-f', '-decode', UP_B64, UP_BIN])
         if (dec.exitCode !== 0) return { ok: false, error: 'decode failed: ' + (dec.stderr || dec.stdout || 'exit ' + dec.exitCode) }
-        const up = await run([CURL, '-s', '-S', '-f', '-X', 'PUT', '--data-binary', '@' + UP_BIN, '-H', 'Content-Type: ' + contentType].concat(sigArgs(state), [objectUrl(state, bucket, key)]))
+        const payloadHash = await fileSha256(UP_BIN)
+        const up = await run([CURL, '-s', '-S', '-f', '-X', 'PUT', '--data-binary', '@' + UP_BIN, '-H', 'Content-Type: ' + contentType].concat(authHeaderArgs(state, 'PUT', objectUrl(state, bucket, key), payloadHash), [objectUrl(state, bucket, key)]))
         if (up.exitCode !== 0) return { ok: false, error: friendlyError(up.stderr) + ' (exit ' + up.exitCode + ')' }
         await cleanupTemp()
         return { ok: true, key, name: safe }
@@ -347,7 +373,7 @@ export function apply(ctx) {
         const bucket = String((payload && payload.bucket) || '')
         const key = String((payload && payload.key) || '')
         if (!bucket || !key) return { ok: false, error: 'no bucket/key' }
-        const res = await run([CURL, '-s', '-S', '-f', '-X', 'DELETE'].concat(sigArgs(state), [objectUrl(state, bucket, key)]))
+        const res = await run([CURL, '-s', '-S', '-f', '-X', 'DELETE'].concat(authHeaderArgs(state, 'DELETE', objectUrl(state, bucket, key), EMPTY_SHA), [objectUrl(state, bucket, key)]))
         if (res.exitCode !== 0) return { ok: false, error: friendlyError(res.stderr) + ' (exit ' + res.exitCode + ')' }
         return { ok: true }
       } catch (err) { return { ok: false, error: String((err && err.message) || err) } }
