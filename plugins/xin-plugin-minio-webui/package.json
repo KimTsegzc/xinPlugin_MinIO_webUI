@@ -1,6 +1,6 @@
 {
   "name": "xin-plugin-minio-webui",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "DSH 知识库文件管理插件（MinIO 浏览/预览），挂载包：左侧栏底部 Knowledge Base 入口 + 资源管理器面板。",
   "type": "module",
   "main": "lib/index.js",

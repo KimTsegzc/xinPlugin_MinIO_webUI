@@ -50,6 +50,15 @@ window.__ModuleLoader__.load({
 			try { return JSON.parse(text); }
 			catch (e) { return { ok: false, error: 'bad response: ' + text.slice(0, 200) }; }
 		}
+		// base64 → Blob object URL（避免大文件 data URL 超出 iframe/img 大小限制而空白）。
+		function b64ToObjectUrl(base64, mime) {
+			try {
+				const bin = atob(base64);
+				const bytes = new Uint8Array(bin.length);
+				for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+				return URL.createObjectURL(new Blob([bytes], { type: mime || 'application/octet-stream' }));
+			} catch (e) { return 'data:' + (mime || 'application/octet-stream') + ';base64,' + base64; }
+		}
 
 		function apply(ctx) {
 			const betterSidebar = ctx.get('betterSidebar');
@@ -130,6 +139,14 @@ window.__ModuleLoader__.load({
 
 			function PreviewModal({ item, bucket, onClose }) {
 				const [content, setContent] = React.useState(null);
+				const urlRef = React.useRef(null);
+				const setMediaContent = (kind, base64, mime) => {
+					const url = b64ToObjectUrl(base64, mime);
+					if (urlRef.current) URL.revokeObjectURL(urlRef.current);
+					urlRef.current = url;
+					setContent({ kind, url });
+				};
+				React.useEffect(() => () => { if (urlRef.current) URL.revokeObjectURL(urlRef.current); }, []);
 				const csvSplit = (l) => { const o = []; let c = ''; let q = false; for (let i = 0; i < l.length; i++) { const ch = l[i]; if (ch === '"') q = !q; else if (ch === ',' && !q) { o.push(c); c = ''; } else c += ch; } o.push(c); return o; };
 				React.useEffect(() => {
 					const t = item.type;
@@ -143,14 +160,14 @@ window.__ModuleLoader__.load({
 							else setContent({ kind: 'text', text: r.text });
 						}).catch((e) => setContent({ kind: 'err', msg: String(e && e.message || e) }));
 					} else if (imgLike) {
-						api('download', { bucket, key: item.key }).then((r) => setContent(r && r.ok ? { kind: 'img', url: 'data:' + (r.contentType || 'image/png') + ';base64,' + r.base64 } : { kind: 'err', msg: (r && r.error) || '加载失败' })).catch((e) => setContent({ kind: 'err', msg: String(e && e.message || e) }));
+						api('download', { bucket, key: item.key }).then((r) => r && r.ok ? setMediaContent('img', r.base64, r.contentType || 'image/png') : setContent({ kind: 'err', msg: (r && r.error) || '加载失败' })).catch((e) => setContent({ kind: 'err', msg: String(e && e.message || e) }));
 					} else if (t === 'pdf') {
-						api('download', { bucket, key: item.key }).then((r) => setContent(r && r.ok ? { kind: 'pdf', url: 'data:application/pdf;base64,' + r.base64 } : { kind: 'err', msg: (r && r.error) || '加载失败' })).catch((e) => setContent({ kind: 'err', msg: String(e && e.message || e) }));
+						api('download', { bucket, key: item.key }).then((r) => r && r.ok ? setMediaContent('pdf', r.base64, 'application/pdf') : setContent({ kind: 'err', msg: (r && r.error) || '加载失败' })).catch((e) => setContent({ kind: 'err', msg: String(e && e.message || e) }));
 					} else {
 						setContent({ kind: 'binary' });
 					}
 				}, []);
-				const downloadFile = () => { api('download', { bucket, key: item.key }).then((r) => { if (r && r.ok) triggerDownload('data:' + (r.contentType || 'application/octet-stream') + ';base64,' + r.base64, r.name || item.name); }).catch(() => {}); };
+				const downloadFile = () => { api('download', { bucket, key: item.key }).then((r) => { if (r && r.ok) { const u = b64ToObjectUrl(r.base64, r.contentType || 'application/octet-stream'); triggerDownload(u, r.name || item.name); setTimeout(() => { try { URL.revokeObjectURL(u); } catch (e) {} }, 30000); } }).catch(() => {}); };
 				let body = null;
 				if (!content) body = React.createElement('div', { className: 'kb-empty' }, '加载中…');
 				else if (content.kind === 'json') body = React.createElement('pre', { className: 'kb-modal-pre' }, content.text);
