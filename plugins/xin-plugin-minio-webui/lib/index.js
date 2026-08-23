@@ -3,7 +3,8 @@
 import { promises as nodeFs } from 'node:fs'
 import nodePath from 'node:path'
 import { spawn as nodeSpawn } from 'node:child_process'
-import { createHash, createHmac } from 'node:crypto'
+import { createHash, createHmac, createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
+import os from 'node:os'
 
 // 用标准 Cordis inject 规范接入 webServer（同 dsh-client-connection 的做法），
 // 避免在宿主作用域里 ctx.get('webServer') 解析不到。
@@ -73,6 +74,29 @@ export function apply(ctx) {
     return s.trim()
   }
 
+  // 配置密钥加密存储：AES-256-GCM，密钥由本机 hostname + 固定盐派生（同机可解，异机不可解）。
+  function encKey() { return createHash('sha256').update((os.hostname() || 'dsh') + ':minio-kb:v1').digest() }
+  function encryptSecret(plain) {
+    try {
+      const iv = randomBytes(12)
+      const c = createCipheriv('aes-256-gcm', encKey(), iv)
+      const enc = Buffer.concat([c.update(String(plain), 'utf8'), c.final()])
+      return 'enc:v1:' + iv.toString('hex') + ':' + c.getAuthTag().toString('hex') + ':' + enc.toString('hex')
+    } catch (e) { return String(plain) }
+  }
+  function decryptSecret(v) {
+    if (typeof v !== 'string' || v.indexOf('enc:v1:') !== 0) return v
+    try {
+      const parts = v.split(':')
+      const iv = Buffer.from(parts[2], 'hex')
+      const tag = Buffer.from(parts[3], 'hex')
+      const data = Buffer.from(parts[4], 'hex')
+      const d = createDecipheriv('aes-256-gcm', encKey(), iv)
+      d.setAuthTag(tag)
+      return Buffer.concat([d.update(data), d.final()]).toString('utf8')
+    } catch (e) { return v }
+  }
+
   async function readState() {
     try {
       const t = await fs.resolve(STATE_PATH)
@@ -81,6 +105,7 @@ export function apply(ctx) {
       const out = {}
       for (const k in DEFAULT_STATE) out[k] = (parsed && parsed[k] !== undefined) ? parsed[k] : DEFAULT_STATE[k]
       if (!Array.isArray(out.buckets)) out.buckets = []
+      out.secretKey = decryptSecret(out.secretKey)
       return out
     } catch (e) {
       const out = {}
@@ -93,8 +118,11 @@ export function apply(ctx) {
     const clean = {}
     for (const k in DEFAULT_STATE) clean[k] = (state && state[k] !== undefined) ? state[k] : DEFAULT_STATE[k]
     clean.buckets = Array.isArray(clean.buckets) ? clean.buckets : []
+    const toStore = {}
+    for (const k in clean) toStore[k] = clean[k]
+    toStore.secretKey = encryptSecret(clean.secretKey)
     const t = await fs.resolve(STATE_PATH)
-    await fs.writeText(t, JSON.stringify(clean, null, 2))
+    await fs.writeText(t, JSON.stringify(toStore, null, 2))
     return clean
   }
 
@@ -105,6 +133,8 @@ export function apply(ctx) {
     if (argv && argv[0] === CURL && argv.indexOf('--noproxy') === -1) {
       const extra = ['--noproxy', '*', '--connect-timeout', '5', '--max-time', '180']
       if (o.retries) extra.push('--retry', String(o.retries), '--retry-connrefused', '--retry-delay', '1')
+      const lastUrl = argv[argv.length - 1]
+      if (typeof lastUrl === 'string' && lastUrl.indexOf('https://') === 0) extra.push('-k')
       argv = argv.slice(0, 1).concat(extra, argv.slice(1))
     }
     if (subprocessSvc && typeof subprocessSvc.spawn === 'function') return runService(argv, o)
