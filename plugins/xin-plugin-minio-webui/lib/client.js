@@ -89,6 +89,41 @@ window.__ModuleLoader__.load({
 			const IconUpload = React.createElement('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }, React.createElement('path', { d: 'M12 16V4M6 10l6-6 6 6' }), React.createElement('path', { d: 'M4 20h16' }));
 			const IconMore = React.createElement('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' }, React.createElement('circle', { cx: 12, cy: 5, r: 1.2 }), React.createElement('circle', { cx: 12, cy: 12, r: 1.2 }), React.createElement('circle', { cx: 12, cy: 19, r: 1.2 }));
 
+			function fileCategory(ext) {
+				const e = String(ext || '').toLowerCase();
+				if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico', 'tiff'].indexOf(e) !== -1) return 'image';
+				if (e === 'pdf') return 'pdf';
+				if (['doc', 'docx'].indexOf(e) !== -1) return 'word';
+				if (['xls', 'xlsx', 'csv', 'tsv'].indexOf(e) !== -1) return 'excel';
+				if (['ppt', 'pptx'].indexOf(e) !== -1) return 'ppt';
+				if (['js', 'mjs', 'ts', 'tsx', 'jsx', 'py', 'go', 'java', 'c', 'cpp', 'h', 'cs', 'rs', 'rb', 'php', 'swift', 'kt', 'scala', 'sh', 'ps1', 'bat', 'sql', 'graphql', 'html', 'htm', 'css', 'scss', 'less'].indexOf(e) !== -1) return 'code';
+				if (['txt', 'md', 'markdown', 'log', 'yaml', 'yml', 'xml', 'json', 'toml', 'ini', 'conf', 'env', 'cfg'].indexOf(e) !== -1) return 'text';
+				if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'tgz', 'iso'].indexOf(e) !== -1) return 'archive';
+				if (['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a'].indexOf(e) !== -1) return 'audio';
+				if (['mp4', 'mkv', 'avi', 'mov', 'webm', 'flv', 'wmv'].indexOf(e) !== -1) return 'video';
+				return 'unknown';
+			}
+			function mkTypeIcon(cat) {
+				const c = { image: '#2aa198', pdf: '#d64545', word: '#2b7cd3', excel: '#2f9e63', ppt: '#e0802f', code: '#8250df', text: '#7a828e', archive: '#a1774b', audio: '#b05fd0', video: '#e0506a', unknown: '#7a828e' }[cat] || '#7a828e';
+				const P = (d) => React.createElement('path', { d });
+				const R = (x, y, w, h, rx) => React.createElement('rect', { x, y, width: w, height: h, rx: rx || 0 });
+				const C = (cx, cy, r) => React.createElement('circle', { cx, cy, r });
+				const attrs = { width: 40, height: 40, viewBox: '0 0 24 24', fill: 'none', stroke: c, strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round' };
+				let kids;
+				if (cat === 'image') kids = [R(3, 5, 18, 14, 2), C(8.5, 9.5, 1.3), P('M6 17l4-4 3 3 3-4 3 3')];
+				else if (cat === 'excel') kids = [R(4, 4, 16, 16, 2), P('M4 9h16M4 14h16M4 19h16M9 4v16')];
+				else if (cat === 'archive') kids = [P('M4 8h16v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z'), P('M4 8l2-4h12l2 4'), P('M10 12h4')];
+				else if (cat === 'audio') kids = [C(10, 17, 1.6), P('M11.6 17V7l5-1')];
+				else if (cat === 'video') kids = [R(3, 5, 18, 14, 2), React.createElement('polygon', { points: '10,9 15,12 10,15', fill: c })];
+				else if (cat === 'code') kids = [P('M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'), P('M14 2v6h6'), P('M9.5 11l-2 2 2 2M14.5 11l2 2-2 2')];
+				else if (cat === 'text') kids = [P('M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'), P('M14 2v6h6'), P('M9 13h6M9 16h4')];
+				else kids = [P('M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'), P('M14 2v6h6')];
+				return React.createElement('svg', attrs, kids);
+			}
+			function fileIcon(item) {
+				return mkTypeIcon(fileCategory((item && item.type) || (item && item.name)));
+			}
+
 			function KbFooterButton() {
 				return React.createElement('button', { className: 'kb-footer-btn', onClick: () => kbStore.toggle() }, IconDatabase, React.createElement('span', null, 'Knowledge Base'));
 			}
@@ -329,7 +364,7 @@ window.__ModuleLoader__.load({
 						if (!all.length) explorer = React.createElement('div', { className: 'kb-empty' }, '空目录');
 						else if (view === 'icon') {
 							explorer = React.createElement('div', { className: 'kb-grid' }, all.map((item) => React.createElement('div', { key: item.isFolder ? item.key : 'f:' + item.key, className: 'kb-card', onClick: () => openFile(item) },
-								React.createElement('div', { className: 'kb-cardIcon' + (item.isFolder ? ' folder' : '') }, item.isFolder ? IconFolder : IconFile),
+								React.createElement('div', { className: 'kb-cardIcon' + (item.isFolder ? ' folder' : '') }, item.isFolder ? IconFolder : fileIcon(item)),
 								nameEl(item.name),
 								item.isFolder ? null : React.createElement('div', { className: 'kb-card-corner' }, menuBtn(item)))));
 						} else {
