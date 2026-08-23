@@ -44,7 +44,7 @@ window.__ModuleLoader__.load({
 			if (typeof document !== 'undefined' && document.head && !document.getElementById('minio-kb-css')) {
 				const tag = document.createElement('style');
 				tag.id = 'minio-kb-css';
-				tag.textContent = CSS;
+				tag.textContent = CSS + '.kb-tree{width:150px}.kb-toolbar-actions{display:flex;align-items:center;gap:6px}.kb-mini{padding:3px 8px;border-radius:6px;border:1px solid var(--dsw-alias-border-l2);background:transparent;color:var(--dsw-alias-label-primary);cursor:pointer;font-size:12px;line-height:1.2}.kb-mini:hover{background:var(--dsw-alias-bg-layer-2)}.kb-mini-danger{color:var(--dsw-alias-state-error-primary)}.kb-card-actions{display:flex;gap:4px;margin-top:4px;justify-content:center}.kb-actions{display:inline-flex;gap:6px}.kb-notice{padding:6px 12px;font-size:12px;color:var(--dsw-alias-label-secondary)}';
 				document.head.appendChild(tag);
 			}
 
@@ -156,6 +156,18 @@ window.__ModuleLoader__.load({
 							status ? React.createElement('div', { className: 'kb-status' }, status) : null)));
 			}
 
+			function triggerDownload(href, name) {
+				try {
+					const a = document.createElement('a');
+					a.href = href;
+					a.download = name;
+					a.style.display = 'none';
+					document.body.appendChild(a);
+					a.click();
+					document.body.removeChild(a);
+				} catch (e) {}
+			}
+
 			function KnowledgeBasePanel() {
 				const [state, setState] = React.useState(null);
 				const [sel, setSel] = React.useState(null);
@@ -163,21 +175,61 @@ window.__ModuleLoader__.load({
 				const [view, setView] = React.useState('icon');
 				const [list, setList] = React.useState(null);
 				const [listErr, setListErr] = React.useState('');
+				const [notice, setNotice] = React.useState('');
 				const [configOpen, setConfigOpen] = React.useState(false);
 				const [addOpen, setAddOpen] = React.useState(false);
 				const [preview, setPreview] = React.useState(null);
+				const [confirmKey, setConfirmKey] = React.useState('');
+				const [uploading, setUploading] = React.useState(false);
 
 				const loadState = () => api('getState', {}).then((r) => { if (r && r.ok) setState(r.state); else setListErr((r && r.error) || '加载失败'); }).catch((e) => setListErr(String(e && e.message || e)));
 				React.useEffect(() => { loadState(); }, []);
 
-				React.useEffect(() => {
+				const loadList = () => {
 					if (!sel) { setList(null); return; }
 					setListErr('');
 					api('listObjects', { bucket: sel.name, prefix }).then((r) => {
 						if (r && r.ok) setList({ folders: r.folders || [], files: r.files || [] });
 						else setListErr((r && r.error) || '加载失败');
 					}).catch((e) => setListErr(String(e && e.message || e)));
-				}, [sel && sel.name, prefix]);
+				};
+				React.useEffect(() => { loadList(); }, [sel && sel.name, prefix]);
+
+				const uploadFiles = (fileList) => {
+					if (!sel || !fileList || !fileList.length) return;
+					setUploading(true); setNotice('');
+					const jobs = [];
+					for (let i = 0; i < fileList.length; i++) {
+						const file = fileList[i];
+						jobs.push(file.arrayBuffer().then((buf) => api('upload', { bucket: sel.name, prefix, name: file.name, base64: bytesToBase64(new Uint8Array(buf)), contentType: file.type || '' })));
+					}
+					Promise.all(jobs).then((results) => {
+						setUploading(false);
+						let ok = 0, bad = 0, err = '';
+						for (const r of results) { if (r && r.ok) ok++; else { bad++; if (!err) err = (r && r.error) || '上传失败'; } }
+						setNotice(ok + ' 个上传成功' + (bad ? '，' + bad + ' 个失败' + (err ? '（' + err + '）' : '') : ''));
+						loadList();
+					}).catch((e) => { setUploading(false); setNotice('上传失败：' + String(e && e.message || e)); });
+				};
+				const onDrop = (e) => { e.preventDefault(); e.stopPropagation(); if (e.dataTransfer) uploadFiles(e.dataTransfer.files); };
+				const onDragOver = (e) => { e.preventDefault(); e.stopPropagation(); };
+
+				const doDownload = (item) => {
+					if (!sel) return;
+					setNotice('');
+					api('download', { bucket: sel.name, key: item.key }).then((r) => {
+						if (r && r.ok) triggerDownload('data:' + (r.contentType || 'application/octet-stream') + ';base64,' + r.base64, r.name || item.name);
+						else setNotice((r && r.error) || '下载失败');
+					}).catch((e) => setNotice('下载失败：' + String(e && e.message || e)));
+				};
+				const doDelete = (item) => {
+					if (!sel) return;
+					setNotice('');
+					api('remove', { bucket: sel.name, key: item.key }).then((r) => {
+						setNotice(r && r.ok ? '已删除 ' + item.name : ((r && r.error) || '删除失败'));
+						setConfirmKey(''); loadList();
+					}).catch((e) => { setNotice('删除失败：' + String(e && e.message || e)); setConfirmKey(''); });
+				};
 
 				const crumbs = [];
 				if (sel) {
@@ -216,28 +268,39 @@ window.__ModuleLoader__.load({
 							crumbs.map((c, i) => React.createElement(React.Fragment, { key: i },
 								React.createElement('span', { className: 'kb-crumb-sep' }, ' / '),
 								React.createElement('span', { className: 'kb-crumb', onClick: () => setPrefix(c.prefix) }, c.label)))),
-						React.createElement('div', { className: 'kb-viewtoggle' },
-							React.createElement('button', { className: view === 'icon' ? 'on' : '', onClick: () => setView('icon') }, '图标'),
-							React.createElement('button', { className: view === 'list' ? 'on' : '', onClick: () => setView('list') }, '列表')));
+						React.createElement('div', { className: 'kb-toolbar-actions' },
+							React.createElement('label', { className: 'kb-btn' }, uploading ? '上传中…' : '上传',
+								React.createElement('input', { type: 'file', multiple: true, style: { display: 'none' }, onChange: (e) => { uploadFiles(e.target.files); e.target.value = ''; } })),
+							React.createElement('div', { className: 'kb-viewtoggle' },
+								React.createElement('button', { className: view === 'icon' ? 'on' : '', onClick: () => setView('icon') }, '图标'),
+								React.createElement('button', { className: view === 'list' ? 'on' : '', onClick: () => setView('list') }, '列表'))));
 					if (listErr) explorer = React.createElement('div', { className: 'kb-empty' }, '加载失败：' + listErr);
 					else if (!list) explorer = React.createElement('div', { className: 'kb-empty' }, '加载中…');
 					else {
 						const folders = list.folders.map((k) => ({ isFolder: true, key: k, name: k.split('/').filter(Boolean).pop(), type: 'folder' }));
 						const files = list.files;
 						const all = folders.concat(files);
+						const actions = (item) => item.isFolder ? null : React.createElement('div', { className: 'kb-card-actions' },
+							React.createElement('button', { className: 'kb-mini', onClick: (e) => { e.stopPropagation(); doDownload(item); } }, '下载'),
+							confirmKey === item.key
+								? React.createElement('button', { className: 'kb-mini kb-mini-danger', onClick: (e) => { e.stopPropagation(); doDelete(item); } }, '确认删除')
+								: React.createElement('button', { className: 'kb-mini kb-mini-danger', onClick: (e) => { e.stopPropagation(); setConfirmKey(item.key); } }, '删除'));
 						if (!all.length) explorer = React.createElement('div', { className: 'kb-empty' }, '空目录');
 						else if (view === 'icon') {
-							explorer = React.createElement('div', { className: 'kb-grid' }, all.map((item) => React.createElement('div', { key: item.isFolder ? item.key : 'f:' + item.key, className: 'kb-card', onClick: () => openFile(item) },
+							explorer = React.createElement('div', { className: 'kb-grid', onDragOver, onDrop }, all.map((item) => React.createElement('div', { key: item.isFolder ? item.key : 'f:' + item.key, className: 'kb-card', onClick: () => openFile(item) },
 								React.createElement('div', { className: 'kb-cardIcon' + (item.isFolder ? ' folder' : '') }, item.isFolder ? IconFolder : IconFile),
-								React.createElement('span', null, item.name))));
+								React.createElement('span', null, item.name),
+								actions(item))));
 						} else {
-							explorer = React.createElement('div', { className: 'kb-list' }, React.createElement('table', null,
-								React.createElement('thead', null, React.createElement('tr', null, React.createElement('th', null, '名称'), React.createElement('th', null, '类型'), React.createElement('th', null, '大小'), React.createElement('th', null, '修改时间'))),
-								React.createElement('tbody', null, all.map((item) => React.createElement('tr', { key: item.isFolder ? item.key : 'f:' + item.key, onClick: () => openFile(item), style: { cursor: 'pointer' } },
-									React.createElement('td', null, item.name), React.createElement('td', null, item.isFolder ? '文件夹' : (item.type || '-')), React.createElement('td', null, item.isFolder ? '-' : formatSize(item.size)), React.createElement('td', null, formatTime(item.lastModified)))))));
+								explorer = React.createElement('div', { className: 'kb-list', onDragOver, onDrop }, React.createElement('table', null,
+									React.createElement('thead', null, React.createElement('tr', null, React.createElement('th', null, '名称'), React.createElement('th', null, '类型'), React.createElement('th', null, '大小'), React.createElement('th', null, '修改时间'), React.createElement('th', null, '操作'))),
+									React.createElement('tbody', null, all.map((item) => React.createElement('tr', { key: item.isFolder ? item.key : 'f:' + item.key, onClick: () => openFile(item), style: { cursor: 'pointer' } },
+								React.createElement('td', null, item.name), React.createElement('td', null, item.isFolder ? '文件夹' : (item.type || '-')), React.createElement('td', null, item.isFolder ? '-' : formatSize(item.size)), React.createElement('td', null, formatTime(item.lastModified)),
+								React.createElement('td', null, item.isFolder ? null : actions(item))))))
+								);
 						}
 					}
-					explorer = React.createElement('div', { className: 'kb-explorer' }, toolbar, explorer);
+					explorer = React.createElement('div', { className: 'kb-explorer' }, toolbar, notice ? React.createElement('div', { className: 'kb-notice' }, notice) : null, explorer);
 				}
 
 				return React.createElement('div', { className: 'kb-root' },

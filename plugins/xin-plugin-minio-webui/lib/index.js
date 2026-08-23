@@ -14,6 +14,8 @@ export function apply(ctx) {
   const CERTUTIL = 'C:/Windows/System32/certutil.exe'
 
   const STATE_PATH = baseDir + '/minio-config.json'
+  const UP_B64 = baseDir + '/.minio-upload.b64'
+  const UP_BIN = baseDir + '/.minio-upload.bin'
   const DL_BIN = baseDir + '/.minio-download.bin'
   const DL_B64 = baseDir + '/.minio-download.b64'
 
@@ -240,6 +242,38 @@ export function apply(ctx) {
         return { ok: true, name: key.split('/').pop(), base64: b64, contentType: guessType(key) }
       } catch (err) { return { ok: false, error: String((err && err.message) || err) } }
     },
+    async upload(payload) {
+      try {
+        const state = await readState()
+        const bucket = String((payload && payload.bucket) || '')
+        const prefix = (payload && payload.prefix) ? String(payload.prefix) : ''
+        const rawName = String((payload && payload.name) || 'file')
+        const base64 = String((payload && payload.base64) || '')
+        const contentType = (payload && payload.contentType) ? String(payload.contentType) : guessType(rawName)
+        if (!bucket) return { ok: false, error: 'no bucket' }
+        const safe = rawName.split('/').pop().replace(/[\\]/g, '_') || 'file'
+        const key = (prefix ? prefix : '') + safe
+        if (!base64) return { ok: false, error: 'empty content' }
+        const b64t = await fs.resolve(UP_B64)
+        await fs.writeText(b64t, base64)
+        const dec = await run([CERTUTIL, '-f', '-decode', UP_B64, UP_BIN])
+        if (dec.exitCode !== 0) return { ok: false, error: 'decode failed: ' + (dec.stderr || dec.stdout || 'exit ' + dec.exitCode) }
+        const up = await run([CURL, '-s', '-S', '-f', '-X', 'PUT', '--data-binary', '@' + UP_BIN, '-H', 'Content-Type: ' + contentType].concat(sigArgs(state), [objectUrl(state, bucket, key)]))
+        if (up.exitCode !== 0) return { ok: false, error: (up.stderr || '') + ' (exit ' + up.exitCode + ')' }
+        return { ok: true, key, name: safe }
+      } catch (err) { return { ok: false, error: String((err && err.message) || err) } }
+    },
+    async remove(payload) {
+      try {
+        const state = await readState()
+        const bucket = String((payload && payload.bucket) || '')
+        const key = String((payload && payload.key) || '')
+        if (!bucket || !key) return { ok: false, error: 'no bucket/key' }
+        const res = await run([CURL, '-s', '-S', '-f', '-X', 'DELETE'].concat(sigArgs(state), [objectUrl(state, bucket, key)]))
+        if (res.exitCode !== 0) return { ok: false, error: (res.stderr || '') + ' (exit ' + res.exitCode + ')' }
+        return { ok: true }
+      } catch (err) { return { ok: false, error: String((err && err.message) || err) } }
+    },
   }
 
   ctx.effect(() => webServer.register({
@@ -260,9 +294,12 @@ export function apply(ctx) {
       }
       let payload = {}
       try {
-        const chunks = []
-        for await (const chunk of req) chunks.push(Buffer.from(chunk))
-        const text = Buffer.concat(chunks).toString('utf8')
+        const text = await new Promise((resolve, reject) => {
+          const chunks = []
+          req.on('data', (c) => { chunks.push(Buffer.from(c)) })
+          req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')))
+          req.on('error', reject)
+        })
         if (text.trim() !== '') payload = JSON.parse(text)
       } catch (e) {
         res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
