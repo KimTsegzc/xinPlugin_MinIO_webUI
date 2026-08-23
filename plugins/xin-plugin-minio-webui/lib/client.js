@@ -6,6 +6,9 @@ window.__ModuleLoader__.load({
 		let React = require('react');
 		let ReactDOM = require('react-dom');
 
+		const MAX_FILES = 20;
+		const MAX_SIZE_BYTES = 20 * 1024 * 1024;
+
 		const inject = ['betterSidebar'];
 
 		const CSS = `.kb-root{display:flex;flex-direction:column;height:100%;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-base)}.kb-topbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;border-bottom:1px solid var(--dsw-alias-border-l1)}.kb-topbar-title{font-size:14px;font-weight:600}.kb-topbar-actions{display:flex;gap:6px}.kb-iconbtn{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border:none;border-radius:8px;background:transparent;color:var(--dsw-alias-label-primary);cursor:pointer}.kb-iconbtn:hover{background:var(--dsw-alias-bg-layer-2)}.kb-body{flex:1;display:flex;min-height:0}.kb-tree{width:220px;flex:none;border-right:1px solid var(--dsw-alias-border-l1);padding:8px 6px;overflow:auto;background:var(--dsw-alias-bg-layer-1)}.kb-tree-title{font-size:12px;font-weight:600;color:var(--dsw-alias-label-secondary);padding:4px 8px;text-transform:uppercase;letter-spacing:.04em}.kb-node{display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:7px;cursor:pointer;font-size:13px}.kb-node:hover{background:var(--dsw-alias-bg-layer-2)}.kb-node.sel{background:var(--dsw-alias-bg-layer-2);font-weight:500}.kb-explorer{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--dsw-alias-bg-base)}.kb-toolbar{display:flex;align-items:center;gap:6px;padding:8px 12px;border-bottom:1px solid var(--dsw-alias-border-l1);flex-wrap:wrap}.kb-breadcrumb{display:flex;align-items:center;gap:4px;font-size:13px;flex-wrap:wrap;min-width:0}.kb-crumb{color:var(--dsw-alias-label-secondary);cursor:pointer;padding:2px 4px;border-radius:5px}.kb-crumb:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}.kb-crumb-sep{color:var(--dsw-alias-label-secondary)}.kb-viewtoggle{display:flex;gap:2px;margin-left:auto}.kb-viewtoggle button{border:1px solid var(--dsw-alias-border-l2);background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;padding:5px 10px;border-radius:7px;font-size:12px}.kb-viewtoggle button.on{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);border-color:var(--dsw-alias-border-l2)}.kb-grid{flex:1;overflow:auto;padding:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:12px;align-content:start}.kb-card{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 8px;border-radius:9px;cursor:pointer;text-align:center;border:1px solid transparent;font-size:12px;word-break:break-all}.kb-card:hover{background:var(--dsw-alias-bg-layer-2);border-color:var(--dsw-alias-border-l1)}.kb-cardIcon{font-size:36px;line-height:1;color:var(--dsw-alias-brand-primary);display:flex;align-items:center;justify-content:center;height:44px}.kb-cardIcon.folder{color:var(--dsw-alias-state-warn-primary)}.kb-list{flex:1;overflow:auto}.kb-list table{width:100%;border-collapse:collapse;font-size:13px}.kb-list th{text-align:left;padding:8px 12px;border-bottom:1px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-secondary);font-weight:600}.kb-list td{padding:8px 12px;border-bottom:1px solid var(--dsw-alias-border-l1)}.kb-list tr:hover{background:var(--dsw-alias-bg-layer-2)}.kb-empty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--dsw-alias-label-secondary);font-size:13px;padding:24px}.kb-mask{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:1100;pointer-events:auto}.kb-dialog{pointer-events:auto;background:var(--dsw-alias-bg-overlay);border:1px solid var(--dsw-alias-border-l1);border-radius:12px;box-shadow:0 16px 48px rgba(0,0,0,.35);width:min(460px,90vw);max-height:84vh;display:flex;flex-direction:column;overflow:hidden}.kb-dialog-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--dsw-alias-border-l1)}.kb-dialog-title{font-weight:600;font-size:14px}.kb-dialog-body{padding:14px 16px;display:flex;flex-direction:column;gap:12px}.kb-dialog-foot{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid var(--dsw-alias-border-l1)}.kb-field{display:flex;flex-direction:column;gap:5px}.kb-field-label{font-size:12px;color:var(--dsw-alias-label-secondary)}.kb-input{padding:7px 10px;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:transparent;color:var(--dsw-alias-label-primary);font:inherit;font-size:13px}.kb-input:focus{outline:none;border-color:var(--dsw-alias-brand-primary)}.kb-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;border:1px solid var(--dsw-alias-border-l2);background:transparent;color:var(--dsw-alias-label-primary);cursor:pointer;font:inherit;font-size:13px}.kb-btn:hover{background:var(--dsw-alias-bg-layer-2)}.kb-btn-primary{background:var(--dsw-alias-brand-primary);border-color:transparent;color:#fff}.kb-btn-primary:hover{filter:brightness(.92)}.kb-btn-danger{color:var(--dsw-alias-state-error-primary);border-color:var(--dsw-alias-border-l2)}.kb-status{padding:6px 12px;font-size:12px;color:var(--dsw-alias-label-secondary)}.kb-footer-btn{display:flex;align-items:center;gap:8px;width:100%;padding:8px 12px;border:none;border-radius:8px;background:transparent;color:var(--dsw-alias-label-primary);cursor:pointer;font:inherit;font-size:13px;text-align:left}.kb-footer-btn:hover{background:var(--dsw-alias-bg-layer-2)}.kb-footer-btn svg{flex:none}.kb-modal-pre{margin:0;white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,Consolas,monospace;font-size:13px;padding:14px;background:var(--dsw-alias-bg-base);border-radius:8px;max-height:66vh;overflow:auto}.kb-modal-img{max-width:100%;max-height:70vh;display:block;margin:0 auto;border-radius:8px}.kb-modal-pdf{width:100%;height:70vh;border:none;background:var(--dsw-alias-bg-base);border-radius:8px}`;
@@ -48,7 +51,7 @@ window.__ModuleLoader__.load({
 			if (typeof document !== 'undefined' && document.head && !document.getElementById('minio-kb-css')) {
 				const tag = document.createElement('style');
 				tag.id = 'minio-kb-css';
-				tag.textContent = CSS + '.kb-tree{width:150px}.kb-menu-wrap{position:relative;display:inline-block}.kb-menu{position:absolute;right:0;top:calc(100% + 4px);background:var(--dsw-alias-bg-overlay);border:1px solid var(--dsw-alias-border-l1);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.25);min-width:120px;z-index:50;overflow:hidden}.kb-menu-item{display:block;width:100%;text-align:left;padding:8px 12px;border:none;background:transparent;color:var(--dsw-alias-label-primary);cursor:pointer;font-size:13px}.kb-menu-item:hover{background:var(--dsw-alias-bg-layer-2)}.kb-menu-danger{color:var(--dsw-alias-state-error-primary)}.kb-toolbar-actions{display:flex;align-items:center;gap:6px}.kb-mini{padding:3px 8px;border-radius:6px;border:1px solid var(--dsw-alias-border-l2);background:transparent;color:var(--dsw-alias-label-primary);cursor:pointer;font-size:12px;line-height:1.2}.kb-mini:hover{background:var(--dsw-alias-bg-layer-2)}.kb-mini-danger{color:var(--dsw-alias-state-error-primary)}.kb-card-actions{display:flex;gap:4px;margin-top:4px;justify-content:center}.kb-actions{display:inline-flex;gap:6px}.kb-notice{padding:6px 12px;font-size:12px;color:var(--dsw-alias-label-secondary)}.kb-card{position:relative}.kb-card-corner{position:absolute;top:6px;right:6px;z-index:5}.kb-corner-btn{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;padding:0;border-radius:6px;border:1px solid var(--dsw-alias-border-l2);background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer}.kb-corner-btn:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}.kb-menu-fixed{position:fixed;z-index:1000;transform:translateX(-100%);background:var(--dsw-alias-bg-overlay);border:1px solid var(--dsw-alias-border-l1);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.25);min-width:120px;overflow:hidden}';
+				tag.textContent = CSS + '.kb-tree{width:150px}.kb-menu-wrap{position:relative;display:inline-block}.kb-menu{position:absolute;right:0;top:calc(100% + 4px);background:var(--dsw-alias-bg-overlay);border:1px solid var(--dsw-alias-border-l1);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.25);min-width:120px;z-index:50;overflow:hidden}.kb-menu-item{display:block;width:100%;text-align:left;padding:8px 12px;border:none;background:transparent;color:var(--dsw-alias-label-primary);cursor:pointer;font-size:13px}.kb-menu-item:hover{background:var(--dsw-alias-bg-layer-2)}.kb-menu-danger{color:var(--dsw-alias-state-error-primary)}.kb-toolbar-actions{display:flex;align-items:center;gap:6px}.kb-mini{padding:3px 8px;border-radius:6px;border:1px solid var(--dsw-alias-border-l2);background:transparent;color:var(--dsw-alias-label-primary);cursor:pointer;font-size:12px;line-height:1.2}.kb-mini:hover{background:var(--dsw-alias-bg-layer-2)}.kb-mini-danger{color:var(--dsw-alias-state-error-primary)}.kb-card-actions{display:flex;gap:4px;margin-top:4px;justify-content:center}.kb-actions{display:inline-flex;gap:6px}.kb-notice{padding:6px 12px;font-size:12px;color:var(--dsw-alias-label-secondary)}.kb-card{position:relative}.kb-card-corner{position:absolute;top:6px;right:6px;z-index:5}.kb-corner-btn{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;padding:0;border-radius:6px;border:1px solid var(--dsw-alias-border-l2);background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer}.kb-corner-btn:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}.kb-menu-fixed{position:fixed;z-index:1000;transform:translateX(-100%);background:var(--dsw-alias-bg-overlay);border:1px solid var(--dsw-alias-border-l1);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.25);min-width:120px;overflow:hidden}.kb-explorer{position:relative}.kb-drop-overlay{position:absolute;inset:0;z-index:90;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:var(--dsw-alias-bg-overlay);border:2px dashed var(--dsw-alias-brand-primary);border-radius:10px;padding:24px;text-align:center;pointer-events:none}.kb-drop-icon{width:52px;height:52px;color:var(--dsw-alias-brand-primary);display:flex;align-items:center;justify-content:center}.kb-drop-icon svg{width:52px;height:52px}.kb-drop-title{font-size:16px;font-weight:600;color:var(--dsw-alias-label-primary)}.kb-drop-sub{font-size:12px;color:var(--dsw-alias-label-secondary)}.kb-drop-limit{font-size:12px;color:var(--dsw-alias-state-warn-primary)}';
 				document.head.appendChild(tag);
 			}
 
@@ -188,6 +191,9 @@ window.__ModuleLoader__.load({
 				const [confirmKey, setConfirmKey] = React.useState('');
 				const [menu, setMenu] = React.useState(null);
 				const [uploading, setUploading] = React.useState(false);
+				const [dragActive, setDragActive] = React.useState(false);
+				const [dragInfo, setDragInfo] = React.useState(null);
+				const dragDepth = React.useRef(0);
 
 				const loadState = () => api('getState', {}).then((r) => { if (r && r.ok) setState(r.state); else setListErr((r && r.error) || '加载失败'); }).catch((e) => setListErr(String(e && e.message || e)));
 				React.useEffect(() => { loadState(); }, []);
@@ -209,11 +215,16 @@ window.__ModuleLoader__.load({
 				React.useEffect(() => { loadList(); }, [sel && sel.name, prefix]);
 
 				const uploadFiles = (fileList) => {
-					if (!sel || !fileList || !fileList.length) return;
+					if (!sel) { setNotice('请先选择左侧 Bucket 再拖放上传'); return; }
+					if (!fileList || !fileList.length) return;
+					const files = Array.from(fileList);
+					if (files.length > MAX_FILES) { setNotice('最多一次上传 ' + MAX_FILES + ' 个文件（当前 ' + files.length + ' 个）'); return; }
+					const over = files.filter((f) => f.size > MAX_SIZE_BYTES);
+					if (over.length) { setNotice('单个文件不能超过 20MB：' + over.map((f) => f.name).join('、')); return; }
 					setUploading(true); setNotice('');
 					const jobs = [];
-					for (let i = 0; i < fileList.length; i++) {
-						const file = fileList[i];
+					for (let i = 0; i < files.length; i++) {
+						const file = files[i];
 						jobs.push(file.arrayBuffer().then((buf) => api('upload', { bucket: sel.name, prefix, name: file.name, base64: bytesToBase64(new Uint8Array(buf)), contentType: file.type || '' })));
 					}
 					Promise.all(jobs).then((results) => {
@@ -224,8 +235,18 @@ window.__ModuleLoader__.load({
 						loadList();
 					}).catch((e) => { setUploading(false); setNotice('上传失败：' + String(e && e.message || e)); });
 				};
-				const onDrop = (e) => { e.preventDefault(); e.stopPropagation(); if (e.dataTransfer) uploadFiles(e.dataTransfer.files); };
-				const onDragOver = (e) => { e.preventDefault(); e.stopPropagation(); };
+				const dragHasFiles = (e) => !!(e.dataTransfer && Array.from((e.dataTransfer.types || [])).indexOf('Files') !== -1);
+				const dragInfoOf = (e) => {
+					const dt = e.dataTransfer;
+					const files = (dt && dt.files) ? Array.from(dt.files) : [];
+					const count = files.length || ((dt && dt.items) ? dt.items.length : 0);
+					const totalSize = files.reduce((a, f) => a + (f.size || 0), 0);
+					return { count, totalSize };
+				};
+				const onDragEnter = (e) => { e.preventDefault(); e.stopPropagation(); if (dragHasFiles(e)) { dragDepth.current++; setDragActive(true); setDragInfo(dragInfoOf(e)); } };
+				const onDragOver = (e) => { e.preventDefault(); e.stopPropagation(); if (dragHasFiles(e) && !dragActive) { setDragActive(true); } };
+				const onDragLeave = (e) => { e.preventDefault(); e.stopPropagation(); dragDepth.current = Math.max(0, dragDepth.current - 1); if (dragDepth.current === 0) { setDragActive(false); setDragInfo(null); } };
+				const onDrop = (e) => { e.preventDefault(); e.stopPropagation(); dragDepth.current = 0; setDragActive(false); setDragInfo(null); if (dragHasFiles(e) && e.dataTransfer) uploadFiles(e.dataTransfer.files); };
 
 				const doReference = (item) => {
 					// 引用：V1.2 暂以文件预览承载，完整「引用到 DSH 对话/附件」见 V2。
@@ -299,12 +320,12 @@ window.__ModuleLoader__.load({
 						const menuBtn = (item) => React.createElement('button', { className: 'kb-corner-btn', title: '更多', onClick: (e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); if (menu && menu.key === item.key) setMenu(null); else setMenu({ key: item.key, item: item, pos: { left: r.right, top: r.bottom + 4 } }); } }, IconMore);
 						if (!all.length) explorer = React.createElement('div', { className: 'kb-empty' }, '空目录');
 						else if (view === 'icon') {
-							explorer = React.createElement('div', { className: 'kb-grid', onDragOver, onDrop }, all.map((item) => React.createElement('div', { key: item.isFolder ? item.key : 'f:' + item.key, className: 'kb-card', onClick: () => openFile(item) },
+							explorer = React.createElement('div', { className: 'kb-grid' }, all.map((item) => React.createElement('div', { key: item.isFolder ? item.key : 'f:' + item.key, className: 'kb-card', onClick: () => openFile(item) },
 								React.createElement('div', { className: 'kb-cardIcon' + (item.isFolder ? ' folder' : '') }, item.isFolder ? IconFolder : IconFile),
 								React.createElement('span', null, item.name),
 								item.isFolder ? null : React.createElement('div', { className: 'kb-card-corner' }, menuBtn(item)))));
 						} else {
-							explorer = React.createElement('div', { className: 'kb-list', onDragOver, onDrop }, React.createElement('table', null,
+							explorer = React.createElement('div', { className: 'kb-list' }, React.createElement('table', null,
 								React.createElement('thead', null, React.createElement('tr', null, React.createElement('th', null, '名称'), React.createElement('th', null, '类型'), React.createElement('th', null, '大小'), React.createElement('th', null, '修改时间'), React.createElement('th', null, '操作'))),
 								React.createElement('tbody', null, all.map((item) => React.createElement('tr', { key: item.isFolder ? item.key : 'f:' + item.key, onClick: () => openFile(item), style: { cursor: 'pointer' } },
 									React.createElement('td', null, item.name), React.createElement('td', null, item.isFolder ? '文件夹' : (item.type || '-')), React.createElement('td', null, item.isFolder ? '-' : formatSize(item.size)), React.createElement('td', null, formatTime(item.lastModified)),
@@ -319,7 +340,13 @@ window.__ModuleLoader__.load({
 							? React.createElement('button', { className: 'kb-menu-item kb-menu-danger', onClick: () => { doDelete(menu.item); } }, '确认删除')
 							: React.createElement('button', { className: 'kb-menu-item kb-menu-danger', onClick: () => { setConfirmKey(menu.item.key); } }, '删除')
 					), document.body) : null;
-					explorer = React.createElement('div', { className: 'kb-explorer' }, toolbar, notice ? React.createElement('div', { className: 'kb-notice' }, notice) : null, explorer, dropdown);
+					const dropOverlay = dragActive ? React.createElement('div', { className: 'kb-drop-overlay' },
+						React.createElement('div', { className: 'kb-drop-icon' }, IconUpload),
+						React.createElement('div', { className: 'kb-drop-title' }, sel ? ('松开以上传' + (dragInfo && dragInfo.count ? ' ' + dragInfo.count + ' 个文件' : '')) : '请先选择左侧 Bucket'),
+						React.createElement('div', { className: 'kb-drop-sub' }, sel ? ('上传到：' + sel.name + (prefix ? '/' + prefix : '')) : '选择 Bucket 后即可拖放上传'),
+						React.createElement('div', { className: 'kb-drop-limit' }, '最多 ' + MAX_FILES + ' 个文件，单个不超过 20MB')
+					) : null;
+					explorer = React.createElement('div', { className: 'kb-explorer', onDragEnter, onDragOver, onDragLeave, onDrop }, toolbar, notice ? React.createElement('div', { className: 'kb-notice' }, notice) : null, explorer, dropdown, dropOverlay);
 				}
 
 				return React.createElement('div', { className: 'kb-root' },
