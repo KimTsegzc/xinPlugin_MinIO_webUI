@@ -40,6 +40,8 @@ export function apply(ctx) {
     // 联动 Chroma 向量入库（可选）：上传成功后调用 ingest.py 抽文本入库。
     chromaPython: 'python',
     chromaIngestScript: 'C:/Users/kimtse/.dsh/xinPlugin_Chroma_fastMCP/ingest.py',
+    // 入库状态记录：key -> { ok, time, chunks, error, skipped }
+    ingestions: {},
   }
 
   // 启动标记：用于事后确认宿主 half 是否执行、服务是否解析到。
@@ -353,7 +355,9 @@ export function apply(ctx) {
         const e = xmlError(xml)
         if (e) return { ok: false, error: e, detail: xml.slice(0, 500) }
         const parsed = parseListV2(xml)
-        return { ok: true, folders: parsed.folders, files: parsed.files }
+        const ing = state.ingestions || {}
+        const files = parsed.files.map((f) => ing[f.key] ? Object.assign({}, f, { ingest: ing[f.key] }) : f)
+        return { ok: true, folders: parsed.folders, files }
       } catch (err) { return { ok: false, error: String((err && err.message) || err) } }
     },
     async readText(payload) {
@@ -409,6 +413,20 @@ export function apply(ctx) {
         let ingested = null
         try { ingested = await runIngest(state, UP_BIN, safe) } catch (e) { ingested = { error: String((e && e.message) || e) } }
         await cleanupTemp()
+        // 持久化入库状态（供知识库下拉菜单展示）。
+        try {
+          const ing = state.ingestions || {}
+          const parsed = ingested && ingested.parsed
+          ing[key] = {
+            ok: !!(parsed && parsed.ok),
+            skipped: !!(ingested && ingested.skipped),
+            time: new Date().toISOString(),
+            chunks: (parsed && parsed.chunks) || 0,
+            error: (ingested && (ingested.error || (parsed && !parsed.ok ? parsed.error : ''))) || '',
+          }
+          state.ingestions = ing
+          await writeState(state)
+        } catch (e) { /* 状态写失败不影响上传 */ }
         return { ok: true, key, name: safe, ingested }
       } catch (err) { return { ok: false, error: String((err && err.message) || err) } }
     },

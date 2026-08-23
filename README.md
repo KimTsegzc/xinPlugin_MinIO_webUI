@@ -1,16 +1,18 @@
 # xinPlugin_MinIO_webUI
 
-DSH（DeepSeek Harness）原生融合的 **知识库 / MinIO 文件管理插件** —— V3.0.1
+DSH（DeepSeek Harness）原生融合的 **知识库 / MinIO 文件管理插件** —— V3.1
 
 > 在 DSH 内嵌一个「Knowledge Base」侧边面板（基于 dsh-better-sidebar）：绑定 Bucket → 目录树浏览 → 资源管理器式文件管理（上传/下载/预览/删除 + 更多菜单）。纯插件、零内核侵入，配置本地持久化，不侵入 DSH 数据库。
 
 | 项 | 值 |
 |---|---|
-| 版本 | **3.0.1** |
+| 版本 | **3.1.0** |
 | 日期 | **2026-08-24** |
 | 目标 | Windows（Node/pnpm/DSH 已装，MinIO 已部署） |
 | 依赖 | dsh-better-sidebar（随本仓库提供） |
 
+> 📌 **V3.1 入库状态展示**（⚠️ 宿主改动，需重启 dsh web 生效）：知识库文件的下拉菜单顶部显示**入库状态**——✅ 已入库（含时间、片段数）/ ⚠️ 入库失败（含原因与时间）/ ℹ️ 未入库/未启用。宿主上传后把入库结果持久化到 `ingestions`，列表对象时随文件返回；上传成功、入库时间、片段数一目了然。
+>
 > 📌 **V3.0.1 补丁**：修复大文件 PDF/图片预览空白——data URL 的 iframe/img 受浏览器大小限制（约 2MB），4.21MB 的《广州十五五规划.pdf》直接空白。改为 base64 → Blob → `URL.createObjectURL`，无大小限制，浏览器原生查看器渲染；预览/下载均走 object URL，弹窗关闭时回收。
 >
 > 📌 **V3.0 联动 Chroma 向量入库**（⚠️ 宿主改动，需重启 dsh web 生效）：上传成功后自动调用 Chroma 知识库的 `ingest.py` 抽文本入库（配置项 `chromaIngestScript`/`chromaPython`，可关）。配合 [xinPlugin_Chroma_fastMCP](https://github.com/KimTsegzc/xinPlugin_Chroma_fastMCP) 与 `standard-chroma` agent preset，实现「MinIO 上传 → 向量入库 → DSH 问答直接检索原文（含文件/页码/行号出处）」。
