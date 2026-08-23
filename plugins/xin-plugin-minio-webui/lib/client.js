@@ -340,6 +340,7 @@ window.__ModuleLoader__.load({
 					}).catch((e) => { setUploading(false); if (uploadCancelled.current) setNotice('已取消上传'); else setNotice('上传失败：' + String(e && e.message || e)); });
 				};
 				const cancelUpload = () => { uploadCancelled.current = true; if (uploadAbort.current) uploadAbort.current.abort(); };
+				const doReconcile = () => { setNotice('核对入库状态…'); api('reconcileIngest', {}).then((r) => { setNotice(r && r.ok ? ('已核对入库状态（' + ((r.reconciled || 0)) + ' 项更新）') : ('核对失败：' + ((r && r.error) || ''))); loadList(); }).catch((e) => setNotice('核对失败：' + String(e && e.message || e))); };
 				const dragHasFiles = (e) => !!(e.dataTransfer && Array.from((e.dataTransfer.types || [])).indexOf('Files') !== -1);
 				const dragInfoOf = (e) => {
 					const dt = e.dataTransfer;
@@ -454,7 +455,8 @@ window.__ModuleLoader__.load({
 						React.createElement('div', { className: 'kb-viewtoggle' },
 							React.createElement('button', { className: view === 'icon' ? 'on' : '', onClick: () => { setMenu(null); setConfirmKey(''); setView('icon'); } }, '图标'),
 							React.createElement('button', { className: view === 'list' ? 'on' : '', onClick: () => { setMenu(null); setConfirmKey(''); setView('list'); } }, '列表')),
-						React.createElement('button', { className: 'kb-mini' + (multiMode ? ' on' : ''), title: '多选', onClick: () => { setMultiMode(!multiMode); setSelected(new Set()); setConfirmBulk(false); setMenu(null); } }, multiMode ? '退出多选' : '多选'));
+						React.createElement('button', { className: 'kb-mini' + (multiMode ? ' on' : ''), title: '多选', onClick: () => { setMultiMode(!multiMode); setSelected(new Set()); setConfirmBulk(false); setMenu(null); } }, multiMode ? '退出多选' : '多选'),
+						React.createElement('button', { className: 'kb-mini', title: '从 Chroma 核对入库状态', onClick: doReconcile }, '刷新入库'));
 					if (listErr) explorer = React.createElement('div', { className: 'kb-empty' }, '加载失败：' + listErr);
 					else if (!list) explorer = React.createElement('div', { className: 'kb-empty' }, '加载中…');
 					else {

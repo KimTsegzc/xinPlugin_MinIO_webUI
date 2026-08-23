@@ -1,16 +1,18 @@
 # xinPlugin_MinIO_webUI
 
-DSH（DeepSeek Harness）原生融合的 **知识库 / MinIO 文件管理插件** —— V3.2
+DSH（DeepSeek Harness）原生融合的 **知识库 / MinIO 文件管理插件** —— V3.2.1
 
 > 在 DSH 内嵌一个「Knowledge Base」侧边面板（基于 dsh-better-sidebar）：绑定 Bucket → 目录树浏览 → 资源管理器式文件管理（上传/下载/预览/删除 + 更多菜单）。纯插件、零内核侵入，配置本地持久化，不侵入 DSH 数据库。
 
 | 项 | 值 |
 |---|---|
-| 版本 | **3.2.0** |
+| 版本 | **3.2.1** |
 | 日期 | **2026-08-24** |
 | 目标 | Windows（Node/pnpm/DSH 已装，MinIO 已部署） |
 | 依赖 | dsh-better-sidebar（随本仓库提供） |
 
+> 📌 **V3.2.1 补丁**：修复「先前命令行/standalone 入库的文件在 UI 显示未入库」——新增宿主 `reconcileIngest`（从 Chroma 的 `list_sources` 对齐状态），工具栏新增「**刷新入库**」按钮，点一次即把已在 Chroma 的文件状态核正为已入库（含片段数）。
+>
 > 📌 **V3.2 RAG-MCP 配置 + 连通性测试**（⚠️ 宿主改动，需重启 dsh web 生效）：MinIO 配置弹窗新增「RAG-MCP（Chroma 知识库）」区——Python 路径、Ingest 脚本、MCP 端点 URL、ServerName、启用 RAG 入库开关，并提供「**测试RAG-MCP**」按钮，逐项探测 Python / Ingest 脚本 / chromadb·fastmcp·pypdf 模块 / MCP HTTP 端点，逐项 ✅/⚠️ 显示结果。上传入库遵循 `ragEnabled` 开关。
 >
 > 📌 **V3.1 入库状态展示**（⚠️ 宿主改动，需重启 dsh web 生效）：知识库文件的下拉菜单顶部显示**入库状态**——✅ 已入库（含时间、片段数）/ ⚠️ 入库失败（含原因与时间）/ ℹ️ 未入库/未启用。宿主上传后把入库结果持久化到 `ingestions`，列表对象时随文件返回。

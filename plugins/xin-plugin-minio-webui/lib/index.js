@@ -348,6 +348,34 @@ export function apply(ctx) {
         return { ok: checks.every((c) => c.ok), checks }
       } catch (err) { return { ok: false, error: String((err && err.message) || err), checks: [] } }
     },
+    async reconcileIngest(payload) {
+      // 从 Chroma 的 list_sources 对齐入库状态，修正「先前命令行/standalone 入库的文件在 UI 显示未入库」。
+      try {
+        const state = await readState()
+        const py = String(state.chromaPython || 'python')
+        const script = String(state.chromaIngestScript || '')
+        if (!script) return { ok: true, reconciled: 0, note: '未配置 ingest 脚本' }
+        const repoDir = nodePath.dirname(script).replace(/\\/g, '/')
+        const code = 'import sys,json; sys.path.insert(0,' + JSON.stringify(repoDir) + '); from chroma_store import list_sources; print(json.dumps(list_sources(), ensure_ascii=False))'
+        const res = await run([py, '-c', code])
+        if (res.exitCode !== 0) return { ok: false, error: (res.stderr || '').slice(0, 200) || ('exit ' + res.exitCode) }
+        const sources = JSON.parse(String(res.stdout || '').trim())
+        const ing = state.ingestions || {}
+        let n = 0
+        for (const s of (Array.isArray(sources) ? sources : [])) {
+          const key = s.source
+          if (!key) continue
+          const prev = ing[key] || {}
+          if (!prev.fromChroma || prev.chunks !== s.chunks) {
+            ing[key] = Object.assign({}, prev, { ok: true, chunks: s.chunks, fromChroma: true, time: prev.time || '' })
+            n++
+          }
+        }
+        state.ingestions = ing
+        await writeState(state)
+        return { ok: true, reconciled: n, sources: (sources || []).map((s) => s.source) }
+      } catch (err) { return { ok: false, error: String((err && err.message) || err) } }
+    },
     async bucketExists(payload) {
       try {
         const state = await readState()
