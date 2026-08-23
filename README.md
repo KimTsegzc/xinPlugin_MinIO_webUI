@@ -1,16 +1,18 @@
 # xinPlugin_MinIO_webUI
 
-DSH（DeepSeek Harness）原生融合的 **知识库 / MinIO 文件管理插件** —— V1.4
+DSH（DeepSeek Harness）原生融合的 **知识库 / MinIO 文件管理插件** —— V1.5
 
 > 在 DSH 内嵌一个「Knowledge Base」侧边面板（基于 dsh-better-sidebar）：绑定 Bucket → 目录树浏览 → 资源管理器式文件管理（上传/下载/预览/删除 + 更多菜单）。纯插件、零内核侵入，配置本地持久化，不侵入 DSH 数据库。
 
 | 项 | 值 |
 |---|---|
-| 版本 | **1.4.0** |
+| 版本 | **1.5.0** |
 | 日期 | **2026-08-24** |
 | 目标 | Windows（Node/pnpm/DSH 已装，MinIO 已部署） |
 | 依赖 | dsh-better-sidebar（随本仓库提供） |
 
+> 📌 **V1.5 文件名过长缩写**：文件卡片/列表的名称过长时不再换行撑高卡片——主名过长自动省略号（`…`），但**始终完整显示后缀**（如 `.pdf`）。实现：名称拆成「主名（可省略）」+「后缀（固定完整）」两个 span，主名用 `text-overflow:ellipsis` 单行裁剪、后缀 `flex:none` 恒显示；列表视图 `table-layout:fixed` 分摊列宽不溢出。两个视图均单行。
+>
 > 📌 **V1.4 拖放上传提示**：拖文件进 Knowledge Base 面板时显示全屏拖放提示（上传图标 + "松开以上传 N 个文件" + 上传位置 + 限制说明）。作用逻辑：把文件拖到右侧文件区，松手即上传到当前目录（`Bucket/当前文件夹`）；未选 Bucket 时提示先选择。限制：最多一次 20 个文件、单个不超过 20MB（超出在面板提示，不静默丢弃）。上传后自动刷新列表。
 >
 > 📌 **V1.3.1 修复**：修复「加载中…/测试中…」一直不落。根因是宿主环境里设了 `HTTP_PROXY(127.0.0.1:7890)`，宿主用 curl 调 MinIO 时走了该代理，代理会**挂起 SigV4 ListObjects**（`GET /bucket?list-type=2`），导致 `listObjects`（面板加载、上传后刷新）永不返回；`GET /`（ListBuckets 测试连接）代理能放行所以看似正常。修法：宿主 `run()` 里给**所有 curl 请求注入 `--noproxy *` 直连 MinIO**（certutil 不受影响）。
