@@ -50,6 +50,25 @@ window.__ModuleLoader__.load({
 			try { return JSON.parse(text); }
 			catch (e) { return { ok: false, error: 'bad response: ' + text.slice(0, 200) }; }
 		}
+		// 带字节级上传进度的 XHR 上传（xhr.upload.onprogress 逐字节回调）。
+		function uploadWithProgress(url, args, onProgress, signal) {
+			return new Promise((resolve, reject) => {
+				const xhr = new XMLHttpRequest();
+				xhr.open('POST', url, true);
+				xhr.setRequestHeader('content-type', 'application/json');
+				if (signal) signal.addEventListener('abort', () => { try { xhr.abort(); } catch (e) {} });
+				xhr.upload.onprogress = (e) => { if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100)); };
+				xhr.onload = () => {
+					const text = xhr.responseText || '';
+					if (!text) return resolve({ ok: false, error: 'empty response (http ' + xhr.status + ')' });
+					try { resolve(JSON.parse(text)); }
+					catch (e) { resolve({ ok: false, error: 'bad response: ' + text.slice(0, 200) }); }
+				};
+				xhr.onerror = () => reject(new Error('网络错误'));
+				xhr.onabort = () => reject(new Error('aborted'));
+				xhr.send(JSON.stringify(args || {}));
+			});
+		}
 		// base64 → Blob object URL（避免大文件 data URL 超出 iframe/img 大小限制而空白）。
 		function b64ToObjectUrl(base64, mime) {
 			try {
@@ -226,7 +245,7 @@ window.__ModuleLoader__.load({
 			}
 
 			const KB_NAME = 'Knowledge Base 知识库（xin-plugin-minio-webui）'
-			const KB_VERSION = 'V3.3.10'
+			const KB_VERSION = 'V3.3.11'
 			const KB_DATE = '2026-08-24'
 			const KB_AUTHOR = 'xiexin1.gd'
 			function InfoDialog({ onClose }) {
@@ -360,7 +379,8 @@ window.__ModuleLoader__.load({
 				const uploadAbort = React.useRef(null);
 				const uploadCancelled = React.useRef(false);
 				const [uploadTotal, setUploadTotal] = React.useState(0);
-				const [uploadDone, setUploadDone] = React.useState(0);
+				const [uploadCur, setUploadCur] = React.useState(0);
+				const [uploadPct, setUploadPct] = React.useState(0);
 				const [multiMode, setMultiMode] = React.useState(false);
 				const [selected, setSelected] = React.useState(new Set());
 				const [confirmBulk, setConfirmBulk] = React.useState(false);
@@ -407,18 +427,37 @@ window.__ModuleLoader__.load({
 					const ac = new AbortController();
 					uploadAbort.current = ac;
 					uploadCancelled.current = false;
-					setUploadTotal(files.length); setUploadDone(0); setUploading(true); setNotice('');
+					setUploadTotal(files.length); setUploadCur(1); setUploadPct(0); setUploading(true); setNotice('');
 					let ok = 0, bad = 0, err = '';
-					const jobs = files.map((file) => file.arrayBuffer().then((buf) => api('upload', { bucket: sel.name, prefix, name: file.name, base64: bytesToBase64(new Uint8Array(buf)), contentType: file.type || '' }, ac.signal)).then((r) => {
-						setUploadDone((d) => d + 1);
-						if (r && r.ok) ok++; else { bad++; if (!err) err = (r && r.error) || '上传失败'; }
-					}));
-					Promise.all(jobs).then(() => {
+					const total = files.length;
+					const finish = () => {
 						setUploading(false);
 						if (uploadCancelled.current) { setNotice('已取消上传'); return; }
 						setNotice(ok + ' 个上传成功' + (bad ? '，' + bad + ' 个失败' + (err ? '（' + err + '）' : '') : ''));
 						loadList();
-					}).catch((e) => { setUploading(false); if (uploadCancelled.current) setNotice('已取消上传'); else setNotice('上传失败：' + String(e && e.message || e)); });
+					};
+					const run = (i) => {
+						if (uploadCancelled.current || i >= total) { finish(); return; }
+						const file = files[i];
+						setUploadCur(i + 1); setUploadPct(0);
+						file.arrayBuffer().then((buf) => {
+							if (uploadCancelled.current) { finish(); return; }
+							const payload = { bucket: sel.name, prefix, name: file.name, base64: bytesToBase64(new Uint8Array(buf)), contentType: file.type || '' };
+							return uploadWithProgress('/minio/api/upload', payload, (pct) => setUploadPct(pct), ac.signal).then((r) => {
+								if (r && r.ok) ok++; else { bad++; if (!err) err = (r && r.error) || '上传失败'; }
+								run(i + 1);
+							}).catch((e) => {
+								if (uploadCancelled.current) { finish(); return; }
+								bad++; if (!err) err = String(e && e.message || e);
+								run(i + 1);
+							});
+						}).catch((e) => {
+							if (uploadCancelled.current) { finish(); return; }
+							bad++; if (!err) err = String(e && e.message || e);
+							run(i + 1);
+						});
+					};
+					run(0);
 				};
 				const cancelUpload = () => { uploadCancelled.current = true; if (uploadAbort.current) uploadAbort.current.abort(); };
 				const doReconcile = () => { setNotice('扫描未入库文件…'); api('reconcileIngest', {}).then((r) => { setNotice(r && r.ok ? ('扫描 ' + (r.scanned || 0) + ' 个文件 → 入库 ' + (r.ingested || 0) + '，暂不支持 ' + (r.unsupported || 0) + '，失败 ' + (r.failed || 0) + '，跳过已入库 ' + (r.skipped || 0)) : ('入库失败：' + ((r && r.error) || ''))); loadList(); }).catch((e) => setNotice('入库失败：' + String(e && e.message || e))); };
@@ -520,9 +559,8 @@ window.__ModuleLoader__.load({
 						uploading
 							? React.createElement('div', { className: 'kb-uploading' },
 								React.createElement('span', { className: 'kb-spin' }),
-								React.createElement('span', null, '上传中 ' + uploadDone + '/' + uploadTotal),
-								React.createElement('span', { className: 'kb-upload-pct' }, Math.round(uploadTotal ? (uploadDone / uploadTotal * 100) : 0) + '%'),
-								React.createElement('div', { className: 'kb-progress' }, React.createElement('div', { className: 'kb-progress-fill', style: { width: (uploadTotal ? (uploadDone / uploadTotal * 100) : 0) + '%' } })),
+								React.createElement('span', null, uploadTotal > 1 ? ('上传中 ' + uploadCur + '/' + uploadTotal) : ('上传中 ' + uploadPct + '%')),
+								React.createElement('div', { className: 'kb-progress' }, React.createElement('div', { className: 'kb-progress-fill', style: { width: uploadPct + '%' } })),
 								React.createElement('button', { className: 'kb-mini kb-mini-danger', onClick: cancelUpload }, '取消'))
 							: React.createElement('label', { className: 'kb-btn' }, React.createElement(React.Fragment, null, IconUpload, '上传'),
 								React.createElement('input', { type: 'file', multiple: true, style: { display: 'none' }, onChange: (e) => { uploadFiles(e.target.files); e.target.value = ''; } })),
