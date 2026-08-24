@@ -245,12 +245,12 @@ window.__ModuleLoader__.load({
 			}
 
 						const KB_NAME = 'Knowledge Base 知识库（MinIO_webUI + Chroma_fastMCP）'
-			const KB_VERSION = 'V3.4.1'
+			
 			const KB_DATE = '2026-08-24'
 			const KB_AUTHOR = 'xiexin1.gd'
 			const KB_COMPONENTS = [
 				{ name: 'MinIO_webUI', pkg: 'xin-plugin-minio-webui', ver: 'V3.4.1', desc: 'DSH 内嵌 Knowledge Base 面板（Bucket 栏 + 资源管理器式文件管理：上传/下载/预览/删除/多选/搜索/排序 + RAG-MCP 配置），驱动文件入库。' },
-				{ name: 'Chroma_fastMCP', pkg: 'xinPlugin_Chroma_fastMCP', ver: 'v1.1.2', desc: '向量检索层：自包含解析工具层（pdf/docx/ofd/txt）+ 分块 + Chroma 向量入库 + FastMCP search/ingest_file/list_sources。' },
+				{ name: 'Chroma_fastMCP', pkg: 'xinPlugin_Chroma_fastMCP', ver: 'v2.0.0', desc: '向量检索层：自包含解析工具层（pdf/docx/ofd/txt）+ 分块 + Chroma 向量入库 + 全文索引（fulltext.sqlite3）+ FastMCP search/read_range/ingest_file/list_sources，检索能力为「一次 search 直达、按需 read_range 精读」。' },
 			]
 			function InfoDialog({ onClose }) {
 				const p = (t, k) => React.createElement('p', { key: k, className: 'kb-info-p' }, t);
@@ -266,22 +266,23 @@ window.__ModuleLoader__.load({
 						React.createElement('div', { className: 'kb-dialog-body' },
 							React.createElement('div', { className: 'kb-section' }, '基本信息'),
 							React.createElement('div', { className: 'kb-info-meta' },
-								meta('名称：', KB_NAME, 'n'), meta('版本：', KB_VERSION, 'v'), meta('日期：', KB_DATE, 'd'), meta('作者：', KB_AUTHOR, 'a')),
+								meta('名称：', KB_NAME, 'n'), meta('日期：', KB_DATE, 'd'), meta('作者：', KB_AUTHOR, 'a')),
 							React.createElement('div', { className: 'kb-section' }, '插件组成'),
 							React.createElement('div', { className: 'kb-info-meta' }, compRows),
 							React.createElement('div', { className: 'kb-section' }, '简介'),
-							p('由两个插件组成：MinIO_webUI 负责 Knowledge Base 面板与 MinIO 文件管理；Chroma_fastMCP 负责解析/向量化/FastMCP 检索。联动实现「MinIO 上传 → 向量入库 → agent 问答检索原文（带文件/页码/行号出处）」。', 'intro'),
+							p('由两个插件组成：MinIO_webUI 负责 Knowledge Base 面板与 MinIO 文件管理；Chroma_fastMCP 负责解析/向量化/全文索引/FastMCP 检索。联动实现「MinIO 上传 → 向量入库 → agent 快速检索原文作答（速度优先）」。配套 DSH 技能 xin-rag-search：一次 search 直达作答；涉及跨文件或需出处时，再 read_range 精读并标注出处。', 'intro'),
 							React.createElement('div', { className: 'kb-section' }, '项目架构'),
 							flow(['文件', '对象库（MinIO）', '解析工具层', '向量库（Chroma）', 'RAG-MCP（FastMCP）', 'DSH agent']),
 							React.createElement('ul', { className: 'kb-info-list' },
 								li('文件 → 对象库：MinIO_webUI 上传/浏览/预览/下载/删除文件到 MinIO 桶（endpoint/密钥 AES-256-GCM 加密存储）。', 'a1'),
 								li('解析工具层：Chroma_fastMCP 的 ingest.py 自包含解析（pdf→pdftotext/pdfminer·中文 CMap；docx/ofd→zip+XML；txt/md 等→UTF-8/GBK）。', 'a2'),
 								li('向量库：文本分块（6 行/块、重叠 1 行、过滤噪声、带页码/行号）→ Chroma 向量化入库，语义+字符二元组 BM25 混合检索。', 'a3'),
-								li('RAG-MCP：FastMCP 把 search / ingest_file / list_sources 暴露成 MCP 工具；DSH agent 检索原文并标注出处（文件/页码/行号）。', 'a4'),
+								li('RAG-MCP：FastMCP 暴露 search（粗定位，命中文件/页码/行号）/ read_range（精读）/ ingest_file / list_sources 四个工具；配套技能 xin-rag-search 速度优先，search 直达作答，涉及跨文件或需出处时再 read_range 精读并标注出处。', 'a4'),
 								li('联动配置：MinIO_webUI 的 RAG-MCP 配置（Python / Ingest 脚本 / MCP 端点 / ServerName）指向本插件 ingest.py；依赖由 Chroma_fastMCP 的 install.ps1 一键装（chromadb / fastmcp / pypdf / pdfminer.six）。', 'a5')),
 							React.createElement('div', { className: 'kb-section' }, '最新版本更新点'),
 							React.createElement('ul', { className: 'kb-info-list' },
-								li('V3.4.1：新增「重新入库」（风险确认）——重扫全部 Bucket 重新向量化入库，并支持多选批量重新入库。', 'u00')))));
+								li('V3.4.1：新增「重新入库」（风险确认）——重扫全部 Bucket 重新向量化入库，并支持多选批量重新入库。', 'u00'),
+								li('Chroma_fastMCP v2.0.0：新增全文索引（fulltext.sqlite3）与 read_range 工具，实现「search + 按需 read_range」检索；配套 DSH 技能 xin-rag-search，速度优先、按需精读。', 'u01')))));
 			}
 
 
