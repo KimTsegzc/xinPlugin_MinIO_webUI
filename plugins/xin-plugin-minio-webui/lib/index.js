@@ -19,7 +19,8 @@ export function apply(ctx) {
   const subprocessSvc = ctx.get('subprocess')
 
   // 固定到部署目录，保证状态文件 minio-config.json 位置确定。
-  const baseDir = 'C:/Users/kimtse/.dsh/xinPlugin_MinIO_webUI'
+  // 原实现硬编码作者机器路径 C:/Users/kimtse/...；改为动态解析当前用户，兼容任意机器部署。
+  const baseDir = String((process.env.USERPROFILE || os.homedir() || 'C:/Users/Public')).replace(/\\/g, '/') + '/.dsh/xinPlugin_MinIO_webUI'
 
   const CURL = 'C:/Windows/System32/curl.exe'
   const CERTUTIL = 'C:/Windows/System32/certutil.exe'
@@ -38,10 +39,10 @@ export function apply(ctx) {
     ssl: false,
     buckets: [],
     // 联动 Chroma 向量入库（可选）：上传成功后调用 ingest.py 抽文本入库。
-    ragEnabled: true,
+    ragEnabled: false,
     chromaPython: 'python',
-    chromaIngestScript: 'C:/Users/kimtse/.dsh/xinPlugin_Chroma_fastMCP/ingest.py',
-    ragMcpUrl: 'http://127.0.0.1:8000/mcp',
+    chromaIngestScript: '',
+    ragMcpUrl: '',
     ragServerName: 'chroma',
     // 入库状态记录：key -> { ok, time, chunks, error, skipped }
     ingestions: {},
