@@ -483,18 +483,18 @@ window.__ModuleLoader__.load({
 								(!item.isFolder && !multiMode) ? React.createElement('div', { className: 'kb-card-corner' }, menuBtn(item)) : null)));
 						} else {
 							explorer = React.createElement('div', { className: 'kb-list' }, React.createElement('table', null,
-								React.createElement('thead', null, React.createElement('tr', null, React.createElement('th', null, '名称'), React.createElement('th', null, '类型'), React.createElement('th', null, '大小'), React.createElement('th', null, '修改时间'), React.createElement('th', null, '入库'), React.createElement('th', null, '操作'))),
+								React.createElement('thead', null, React.createElement('tr', null, React.createElement('th', null, '名称'), React.createElement('th', null, '类型'), React.createElement('th', null, '大小'), React.createElement('th', null, '修改时间'), React.createElement('th', null, 'RAG向量入库'), React.createElement('th', null, '操作'))),
 								React.createElement('tbody', null, all.map((item) => React.createElement('tr', { key: item.isFolder ? item.key : 'f:' + item.key, className: selected.has(item.key) ? 'sel' : '', onClick: () => { if (multiMode) { if (!item.isFolder) toggleSel(item); } else openFile(item); }, style: { cursor: 'pointer' } },
-									React.createElement('td', null, React.createElement('span', { className: 'kb-namecell' }, (multiMode && !item.isFolder) ? React.createElement('span', { className: 'kb-rowcheck' }, selected.has(item.key) ? '✓' : '') : null, nameEl(item.name))), React.createElement('td', null, item.isFolder ? '文件夹' : (item.type || '-')), React.createElement('td', null, item.isFolder ? '-' : formatSize(item.size)), React.createElement('td', null, formatTime(item.lastModified)), React.createElement('td', { className: 'kb-ing' }, (function () { const ig = item.ingest; if (ig) { if (ig.ok) return '✅ 已入库 ' + (formatTime(ig.time) || '') + (ig.chunks ? ' · ' + ig.chunks + ' 片段' : ''); if (ig.unsupported) return '🚫 暂不支持向量化'; if (ig.skipped) return 'ℹ️ 未启用'; return '⚠️ 失败 ' + (formatTime(ig.time) || ''); } return '—'; })()),
+									React.createElement('td', null, React.createElement('span', { className: 'kb-namecell' }, (multiMode && !item.isFolder) ? React.createElement('span', { className: 'kb-rowcheck' }, selected.has(item.key) ? '✓' : '') : null, nameEl(item.name))), React.createElement('td', null, item.isFolder ? '文件夹' : (item.type || '-')), React.createElement('td', null, item.isFolder ? '-' : formatSize(item.size)), React.createElement('td', null, formatTime(item.lastModified)), React.createElement('td', { className: 'kb-ing' }, (function () { const ig = item.ingest; if (ig) { if (ig.ok) return '✅ 已入库 ' + (formatTime(ig.time) || '') + (ig.chunks ? ' · ' + ig.chunks + ' 片段' : ''); if (ig.unsupported) return '🚫 格式暂不支持'; if (ig.skipped) return '📥 未入库'; return '⚠️ 入库失败 ' + (formatTime(ig.time) || ''); } return '📥 未入库'; })()),
 									React.createElement('td', null, (!item.isFolder && !multiMode) ? menuBtn(item) : null))))));
 						}
 					}
 					const _ing = menu && menu.item && menu.item.ingest
 					const ingestTxt = _ing
 						? (_ing.ok ? ('✅ 已入库 ' + (formatTime(_ing.time) || '') + (_ing.chunks ? ' · ' + _ing.chunks + ' 片段' : ''))
-							: (_ing.unsupported ? ('🚫 暂不支持向量化' + (_ing.error ? ' · ' + _ing.error : ''))
-								: (_ing.skipped ? 'ℹ️ 未启用入库' : '⚠️ 入库失败 ' + (formatTime(_ing.time) || '') + (_ing.error ? ' · ' + _ing.error : ''))))
-						: 'ℹ️ 未入库'
+							: (_ing.unsupported ? ('🚫 格式暂不支持' + (_ing.error ? ' · ' + _ing.error : ''))
+								: (_ing.skipped ? '📥 未入库' : '⚠️ 入库失败 ' + (formatTime(_ing.time) || '') + (_ing.error ? ' · ' + _ing.error : ''))))
+						: '📥 未入库'
 					const dropdown = menu && menu.item ? ReactDOM.createPortal(React.createElement('div', { className: 'kb-menu-fixed', style: { left: menu.pos.left, top: menu.pos.top }, onClick: (e) => e.stopPropagation() },
 						React.createElement('div', { className: 'kb-menu-status' }, ingestTxt),
 						React.createElement('button', { className: 'kb-menu-item', onClick: () => { doReference(menu.item); } }, '引用'),
