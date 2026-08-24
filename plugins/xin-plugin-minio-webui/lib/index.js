@@ -411,6 +411,66 @@ export function apply(ctx) {
         return { ok: true, scanned: scanned, ingested: ingested, unsupported: unsupported, failed: failed, skipped: skipped }
       } catch (err) { return { ok: false, error: String((err && err.message) || err) } }
     },
+    async scanIngest(payload) {
+      // 「扫描入库」第一阶段：只扫总量，返回未入库文件列表（不处理）。
+      try {
+        const state = await readState()
+        const script = String(state.chromaIngestScript || '')
+        if (!script) return { ok: true, total: 0, files: [], note: '未配置 ingest 脚本' }
+        const ing = state.ingestions || {}
+        const files = []
+        for (const b of (Array.isArray(state.buckets) ? state.buckets : [])) {
+          const bucket = (b && b.name) ? String(b.name) : ''
+          if (!bucket) continue
+          const listing = await api.listObjects({ bucket: bucket, prefix: '' })
+          if (!listing || !listing.ok) continue
+          for (const f of (Array.isArray(listing.files) ? listing.files : [])) {
+            const key = f.key
+            if (!key) continue
+            const prev = ing[key] || {}
+            if (prev.ok || prev.unsupported) continue   // 已入库/已判不支持，不重复处理
+            files.push({ bucket: bucket, key: key, name: f.name || String(key).split('/').pop() })
+          }
+        }
+        return { ok: true, total: files.length, files: files }
+      } catch (err) { return { ok: false, error: String((err && err.message) || err) } }
+    },
+    async ingestOne(payload) {
+      // 「扫描入库」第二阶段：处理单个文件（下载→解析→向量入库），返回该文件入库结果。
+      try {
+        const state = await readState()
+        const script = String(state.chromaIngestScript || '')
+        if (!script) return { ok: false, error: '未配置 ingest 脚本' }
+        const bucket = String((payload && payload.bucket) || '')
+        const key = String((payload && payload.key) || '')
+        if (!bucket || !key) return { ok: false, error: 'no bucket/key' }
+        const prev = (state.ingestions || {})[key] || {}
+        const dl = await api.download({ bucket: bucket, key: key })
+        if (!dl || !dl.ok) return { ok: false, error: (dl && dl.error) || '下载失败', result: Object.assign({}, prev, { ok: false, time: new Date().toISOString(), error: (dl && dl.error) || '下载失败' }) }
+        const tempPath = baseDir + '/.ingest-one.bin'
+        try { await nodeFs.writeFile(tempPath, Buffer.from(String(dl.base64 || ''), 'base64')) }
+        catch (e) { return { ok: false, error: String((e && e.message) || e) } }
+        const src = (payload && payload.name) || String(key).split('/').pop()
+        const res = await runIngest(state, tempPath, src)
+        const parsed = res && res.parsed
+        const isOk = !!(parsed && parsed.ok)
+        const ing = state.ingestions || {}
+        ing[key] = Object.assign({}, prev, {
+          ok: isOk,
+          unsupported: !!(parsed && parsed.unsupported),
+          skipped: !!(res && res.skipped),
+          time: new Date().toISOString(),
+          chunks: (parsed && parsed.chunks) || 0,
+          parser: (parsed && parsed.parser) || '',
+          parse_ms: (parsed && parsed.parse_ms) || 0,
+          ingest_ms: (parsed && parsed.ingest_ms) || 0,
+          error: (isOk ? '' : (parsed && parsed.error) || String(res && res.stderr || '').slice(0, 200)) || '',
+        })
+        state.ingestions = ing
+        await writeState(state)
+        return { ok: true, result: ing[key], key: key }
+      } catch (err) { return { ok: false, error: String((err && err.message) || err) } }
+    },
     async bucketExists(payload) {
       try {
         const state = await readState()

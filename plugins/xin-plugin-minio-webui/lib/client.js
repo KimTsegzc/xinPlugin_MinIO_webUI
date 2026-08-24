@@ -245,7 +245,7 @@ window.__ModuleLoader__.load({
 			}
 
 			const KB_NAME = 'Knowledge Base 知识库（xin-plugin-minio-webui）'
-			const KB_VERSION = 'V3.3.11'
+			const KB_VERSION = 'V3.4.0'
 			const KB_DATE = '2026-08-24'
 			const KB_AUTHOR = 'xiexin1.gd'
 			function InfoDialog({ onClose }) {
@@ -265,8 +265,9 @@ window.__ModuleLoader__.load({
 							p('DSH 知识库文件管理插件：浏览/预览/上传 MinIO 对象，联动 Chroma 向量库做 RAG 检索，并经 FastMCP 暴露给 agent，在问答时检索原文并标注出处。', 'intro'),
 							React.createElement('div', { className: 'kb-section' }, '最新版本更新点'),
 							React.createElement('ul', { className: 'kb-info-list' },
+								li('V3.4.0：「扫描入库」先扫总量再逐文件处理，提示语分步显示（扫到N个未入库→处理第K个→解析中→入库完成·解析/向量耗时）', 'u0'),
 								li('V3.3.1：RAG 入库列改名为「RAG向量入库」；状态消歧义（格式暂不支持 / 未入库），修复图片等不支持格式误显示失败', 'u1'),
-								li('V3.3.0：入库支持 docx / ofd / pdf（参照 xin-kb 解析：pdf 走内嵌 pdftotext+中文 CMap 兜底 pypdf；docx/ofd 走 zip+XML 零依赖）；「刷新入库」点击扫描桶内未入库文件并自动入库；列表新增「RAG向量入库」列并修复元素叠加', 'u2')),
+								li('V3.3.0：入库支持 docx / ofd / pdf（参照 xin-kb 解析：pdf 走内嵌 pdftotext+中文 CMap 兜底 pypdf；docx/ofd 走 zip+XML 零依赖）；「扫描入库」点击扫描桶内未入库文件并自动入库；列表新增「RAG向量入库」列并修复元素叠加', 'u2')),
 							React.createElement('div', { className: 'kb-section' }, '主要功能与实现链路'),
 							React.createElement('div', { className: 'kb-info-flow' }, ['文件', '对象库', '解析工具层', '向量库', 'RAG-MCP 服务'].map((s, i) => React.createElement(React.Fragment, { key: i }, i ? ' → ' : '', React.createElement('b', null, s)))),
 							React.createElement('ul', { className: 'kb-info-list' },
@@ -460,7 +461,30 @@ window.__ModuleLoader__.load({
 					run(0);
 				};
 				const cancelUpload = () => { uploadCancelled.current = true; if (uploadAbort.current) uploadAbort.current.abort(); };
-				const doReconcile = () => { setNotice('扫描未入库文件…'); api('reconcileIngest', {}).then((r) => { setNotice(r && r.ok ? ('扫描 ' + (r.scanned || 0) + ' 个文件 → 入库 ' + (r.ingested || 0) + '，暂不支持 ' + (r.unsupported || 0) + '，失败 ' + (r.failed || 0) + '，跳过已入库 ' + (r.skipped || 0)) : ('入库失败：' + ((r && r.error) || ''))); loadList(); }).catch((e) => setNotice('入库失败：' + String(e && e.message || e))); };
+				const doReconcile = () => {
+					setNotice('扫描未入库文件…');
+					api('scanIngest', {}).then((r) => {
+						if (!r || !r.ok) { setNotice('扫描失败：' + ((r && r.error) || '')); return; }
+						const files = (r.files || []);
+						if (!files.length) { setNotice('扫到 0 个未入库文件'); loadList(); return; }
+						setNotice('扫到 ' + files.length + ' 个未入库，开始逐个处理…');
+						let ok = 0, bad = 0;
+						const next = (i) => {
+							if (i >= files.length) { setNotice('扫描入库完成：成功 ' + ok + '，失败/不支持 ' + (files.length - ok)); loadList(); return; }
+							const f = files[i];
+							setNotice('处理第 ' + (i + 1) + '/' + files.length + ' 个：' + f.name + ' · 解析中…');
+							api('ingestOne', { bucket: f.bucket, key: f.key, name: f.name }).then((res) => {
+								const rr = res && res.result;
+								if (rr && rr.ok) { ok++; }
+								if (rr && rr.ok) setNotice('处理第 ' + (i + 1) + '/' + files.length + ' 个：' + f.name + ' · ✅ 入库完成 · ' + (rr.parser || '') + ' · 解析 ' + (rr.parse_ms || 0) + 'ms · 向量 ' + (rr.ingest_ms || 0) + 'ms · ' + (rr.chunks || 0) + ' 片段');
+								else if (rr && rr.unsupported) setNotice('处理第 ' + (i + 1) + '/' + files.length + ' 个：' + f.name + ' · 🚫 格式暂不支持');
+								else { bad++; setNotice('处理第 ' + (i + 1) + '/' + files.length + ' 个：' + f.name + ' · ⚠️ 入库失败 ' + ((rr && rr.error) || '')); }
+								next(i + 1);
+							}).catch((e) => { bad++; setNotice('处理第 ' + (i + 1) + '/' + files.length + ' 个：' + f.name + ' · ⚠️ ' + String(e && e.message || e)); next(i + 1); });
+						};
+						next(0);
+					}).catch((e) => setNotice('扫描失败：' + String(e && e.message || e)));
+				};
 				const dragHasFiles = (e) => !!(e.dataTransfer && Array.from((e.dataTransfer.types || [])).indexOf('Files') !== -1);
 				const dragInfoOf = (e) => {
 					const dt = e.dataTransfer;
@@ -577,7 +601,7 @@ window.__ModuleLoader__.load({
 							React.createElement('button', { className: view === 'icon' ? 'on' : '', onClick: () => { setMenu(null); setConfirmKey(''); setView('icon'); } }, '图标'),
 							React.createElement('button', { className: view === 'list' ? 'on' : '', onClick: () => { setMenu(null); setConfirmKey(''); setView('list'); } }, '列表')),
 						React.createElement('button', { className: 'kb-mini' + (multiMode ? ' on' : ''), title: '多选', onClick: () => { setMultiMode(!multiMode); setSelected(new Set()); setConfirmBulk(false); setMenu(null); } }, multiMode ? '退出多选' : '多选'),
-						React.createElement('button', { className: 'kb-mini', title: '从 Chroma 核对入库状态', onClick: doReconcile }, '刷新入库'));
+						React.createElement('button', { className: 'kb-mini', title: '扫描桶内未入库文件并逐个入库', onClick: doReconcile }, '扫描入库'));
 					if (listErr) explorer = React.createElement('div', { className: 'kb-empty' }, '加载失败：' + listErr);
 					else if (!list) explorer = React.createElement('div', { className: 'kb-empty' }, '加载中…');
 					else {
