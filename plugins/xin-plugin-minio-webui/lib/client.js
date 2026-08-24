@@ -226,7 +226,7 @@ window.__ModuleLoader__.load({
 			}
 
 			const KB_NAME = 'Knowledge Base 知识库（xin-plugin-minio-webui）'
-			const KB_VERSION = 'V3.3.4'
+			const KB_VERSION = 'V3.3.5'
 			const KB_DATE = '2026-08-24'
 			const KB_AUTHOR = 'xiexin1.gd'
 			function InfoDialog({ onClose }) {
@@ -319,7 +319,7 @@ window.__ModuleLoader__.load({
 				const [configOpen, setConfigOpen] = React.useState(false);
 				const [addOpen, setAddOpen] = React.useState(false);
 				const [infoOpen, setInfoOpen] = React.useState(false);
-				const [online, setOnline] = React.useState(null);
+				const [connMap, setConnMap] = React.useState({});
 				const [preview, setPreview] = React.useState(null);
 				const [confirmKey, setConfirmKey] = React.useState('');
 				const [menu, setMenu] = React.useState(null);
@@ -337,8 +337,14 @@ window.__ModuleLoader__.load({
 
 				const loadState = () => api('getState', {}).then((r) => { if (r && r.ok) setState(r.state); else setListErr((r && r.error) || '加载失败'); }).catch((e) => setListErr(String(e && e.message || e)));
 				React.useEffect(() => { loadState(); }, []);
-				// 桶连接状态：绿色在线 / 灰色离线，每 15s 探测一次
-				React.useEffect(() => { const probe = () => { api('testConnection', {}).then((r) => setOnline(!!(r && r.ok))).catch(() => setOnline(false)); }; probe(); const iv = setInterval(probe, 15000); return () => clearInterval(iv); }, []);
+				// 桶连接状态：按桶探测是否存在（当前源），绿=在线(存在) / 灰=离线(不存在/不可达)，每 15s 刷新
+				React.useEffect(() => {
+					const names = (state && state.buckets) ? state.buckets.map((b) => b.name) : [];
+					const probe = () => { names.forEach((n) => { api('bucketExists', { name: n }).then((r) => setConnMap((p) => { const q = {}; for (const k in p) q[k] = p[k]; q[n] = !!(r && r.ok && r.exists); return q; })).catch(() => setConnMap((p) => { const q = {}; for (const k in p) q[k] = p[k]; q[n] = false; return q; })); }); };
+					if (names.length) probe();
+					const iv = setInterval(probe, 15000);
+					return () => clearInterval(iv);
+				}, [state]);
 				React.useEffect(() => {
 					if (!menu) return undefined;
 					const onDoc = () => setMenu(null);
@@ -467,7 +473,7 @@ window.__ModuleLoader__.load({
 				const tree = React.createElement('div', { className: 'kb-tree' },
 					React.createElement('div', { className: 'kb-tree-title' }, 'Buckets'),
 					(state && state.buckets && state.buckets.length) ? state.buckets.map((b) => React.createElement('div', { key: b.id, className: 'kb-node' + (sel && sel.id === b.id ? ' sel' : ''), onClick: () => { setSel(b); setPrefix(''); }, onContextMenu: (e) => { e.preventDefault(); if (window.confirm('移除对该 Bucket 的本地绑定？')) api('removeBucket', { id: b.id }).then(() => { loadState(); if (sel && sel.id === b.id) setSel(null); }); } },
-						React.createElement('span', { className: 'kb-conn-dot ' + (online === true ? 'on' : (online === false ? 'off' : '')), title: online === true ? '在线' : (online === false ? '离线' : '检测中') }),
+						React.createElement('span', { className: 'kb-conn-dot ' + (connMap[b.name] === true ? 'on' : (connMap[b.name] === false ? 'off' : '')), title: connMap[b.name] === true ? '在线' : (connMap[b.name] === false ? '离线' : '检测中') }),
 						React.createElement('span', { style: { color: 'var(--dsw-alias-state-warn-primary)' } }, IconFolder),
 						React.createElement('span', null, b.name)))
 						: React.createElement('div', { className: 'kb-status', style: { padding: '8px' } }, '尚未添加 Bucket，点右上角 ➕ '));
