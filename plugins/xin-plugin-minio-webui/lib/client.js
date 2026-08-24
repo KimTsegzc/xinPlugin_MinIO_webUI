@@ -245,7 +245,7 @@ window.__ModuleLoader__.load({
 			}
 
 			const KB_NAME = 'Knowledge Base 知识库（xin-plugin-minio-webui）'
-			const KB_VERSION = 'V3.4.0'
+			const KB_VERSION = 'V3.4.1'
 			const KB_DATE = '2026-08-24'
 			const KB_AUTHOR = 'xiexin1.gd'
 			function InfoDialog({ onClose }) {
@@ -265,6 +265,7 @@ window.__ModuleLoader__.load({
 							p('DSH 知识库文件管理插件：浏览/预览/上传 MinIO 对象，联动 Chroma 向量库做 RAG 检索，并经 FastMCP 暴露给 agent，在问答时检索原文并标注出处。', 'intro'),
 							React.createElement('div', { className: 'kb-section' }, '最新版本更新点'),
 							React.createElement('ul', { className: 'kb-info-list' },
+								li('V3.4.1：新增「重新入库」（风险确认）——重扫全部 Bucket 重新向量化入库，并支持多选批量重新入库', 'u00'),
 								li('V3.4.0：「扫描入库」先扫总量再逐文件处理，提示语分步显示（扫到N个未入库→处理第K个→解析中→入库完成·解析/向量耗时）', 'u0'),
 								li('V3.3.1：RAG 入库列改名为「RAG向量入库」；状态消歧义（格式暂不支持 / 未入库），修复图片等不支持格式误显示失败', 'u1'),
 								li('V3.3.0：入库支持 docx / ofd / pdf（参照 xin-kb 解析：pdf 走内嵌 pdftotext+中文 CMap 兜底 pypdf；docx/ofd 走 zip+XML 零依赖）；「扫描入库」点击扫描桶内未入库文件并自动入库；列表新增「RAG向量入库」列并修复元素叠加', 'u2')),
@@ -461,6 +462,32 @@ window.__ModuleLoader__.load({
 					run(0);
 				};
 				const cancelUpload = () => { uploadCancelled.current = true; if (uploadAbort.current) uploadAbort.current.abort(); };
+				const runReingest = (files) => {
+					if (!files.length) { setNotice('没有可重新入库的文件'); return; }
+					setNotice('开始重新入库，共 ' + files.length + ' 个文件…');
+					let ok = 0;
+					const next = (i) => {
+						if (i >= files.length) { setNotice('重新入库完成：成功 ' + ok + '/' + files.length); loadList(); return; }
+						const f = files[i];
+						setNotice('重入库第 ' + (i + 1) + '/' + files.length + ' 个：' + f.name + ' · 解析中…');
+						api('ingestOne', { bucket: f.bucket, key: f.key, name: f.name }).then((res) => {
+							const rr = res && res.result;
+							if (rr && rr.ok) { ok++; setNotice('重入库第 ' + (i + 1) + '/' + files.length + ' 个：' + f.name + ' · ✅ 入库完成 · ' + (rr.parser || '') + ' · 解析 ' + (rr.parse_ms || 0) + 'ms · 向量 ' + (rr.ingest_ms || 0) + 'ms · ' + (rr.chunks || 0) + ' 片段'); }
+							else if (rr && rr.unsupported) setNotice('重入库第 ' + (i + 1) + '/' + files.length + ' 个：' + f.name + ' · 🚫 格式暂不支持');
+							else setNotice('重入库第 ' + (i + 1) + '/' + files.length + ' 个：' + f.name + ' · ⚠️ 入库失败 ' + ((rr && rr.error) || ''));
+							next(i + 1);
+						}).catch((e) => { setNotice('重入库第 ' + (i + 1) + '/' + files.length + ' 个：' + f.name + ' · ⚠️ ' + String(e && e.message || e)); next(i + 1); });
+					};
+					next(0);
+				};
+				const doReingestAll = () => {
+					if (!window.confirm('重新入库将扫描全部 Bucket 并对所有文件重新向量化（覆盖现有向量数据），确定继续？')) return;
+					setNotice('扫描全部 Bucket…');
+					api('scanIngest', { force: true }).then((r) => {
+						if (!r || !r.ok) { setNotice('扫描失败：' + ((r && r.error) || '')); return; }
+						runReingest(r.files || []);
+					}).catch((e) => setNotice('扫描失败：' + String(e && e.message || e)));
+				};
 				const doReconcile = () => {
 					setNotice('扫描未入库文件…');
 					api('scanIngest', {}).then((r) => {
@@ -601,7 +628,8 @@ window.__ModuleLoader__.load({
 							React.createElement('button', { className: view === 'icon' ? 'on' : '', onClick: () => { setMenu(null); setConfirmKey(''); setView('icon'); } }, '图标'),
 							React.createElement('button', { className: view === 'list' ? 'on' : '', onClick: () => { setMenu(null); setConfirmKey(''); setView('list'); } }, '列表')),
 						React.createElement('button', { className: 'kb-mini' + (multiMode ? ' on' : ''), title: '多选', onClick: () => { setMultiMode(!multiMode); setSelected(new Set()); setConfirmBulk(false); setMenu(null); } }, multiMode ? '退出多选' : '多选'),
-						React.createElement('button', { className: 'kb-mini', title: '扫描桶内未入库文件并逐个入库', onClick: doReconcile }, '扫描入库'));
+						React.createElement('button', { className: 'kb-mini', title: '扫描桶内未入库文件并逐个入库', onClick: doReconcile }, '扫描入库'),
+						React.createElement('button', { className: 'kb-mini', title: '重新扫描全部 Bucket 并对所有文件重新向量化入库（覆盖现有数据）', onClick: doReingestAll }, '重新入库'));
 					if (listErr) explorer = React.createElement('div', { className: 'kb-empty' }, '加载失败：' + listErr);
 					else if (!list) explorer = React.createElement('div', { className: 'kb-empty' }, '加载中…');
 					else {
@@ -613,6 +641,7 @@ window.__ModuleLoader__.load({
 						bulkBar = multiMode ? React.createElement('div', { className: 'kb-bulk' },
 							React.createElement('span', null, '已选 ' + selected.size + ' 项'),
 							React.createElement('button', { className: 'kb-mini', onClick: () => toggleAllSelected(all) }, allFilesSelected(all) ? '取消全选' : '全选'),
+							React.createElement('button', { className: 'kb-mini', title: '对选中文件重新向量化入库', onClick: () => { const targets = allSelectable.filter((x) => selected.has(x.key)); if (!targets.length) { setNotice('未选中可重入库的文件'); return; } if (!window.confirm('重新入库选中的 ' + targets.length + ' 个文件？将覆盖其现有向量数据。')) return; setMultiMode(false); setSelected(new Set()); setConfirmBulk(false); setMenu(null); runReingest(targets.map((x) => ({ bucket: sel.name, key: x.key, name: x.name }))); } }, '重新入库'),
 							confirmBulk ? React.createElement('button', { className: 'kb-mini kb-mini-danger', onClick: doBulkDelete }, '确认删除') : React.createElement('button', { className: 'kb-mini kb-mini-danger', onClick: () => setConfirmBulk(true) }, '删除选中'))
 						: null;
 						const menuBtn = (item) => React.createElement('button', { className: 'kb-corner-btn', title: '更多', onClick: (e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); if (menu && menu.key === item.key) setMenu(null); else setMenu({ key: item.key, item: item, pos: { left: r.right, top: r.bottom + 4 } }); } }, IconMore);

@@ -418,6 +418,7 @@ export function apply(ctx) {
         const script = String(state.chromaIngestScript || '')
         if (!script) return { ok: true, total: 0, files: [], note: '未配置 ingest 脚本' }
         const ing = state.ingestions || {}
+        const force = !!(payload && payload.force)   // 重新入库：包含已入库文件
         const files = []
         for (const b of (Array.isArray(state.buckets) ? state.buckets : [])) {
           const bucket = (b && b.name) ? String(b.name) : ''
@@ -428,7 +429,7 @@ export function apply(ctx) {
             const key = f.key
             if (!key) continue
             const prev = ing[key] || {}
-            if (prev.ok || prev.unsupported) continue   // 已入库/已判不支持，不重复处理
+            if (!force && (prev.ok || prev.unsupported)) continue   // 扫描入库跳过已入库/已判不支持；重新入库(force)全包含
             files.push({ bucket: bucket, key: key, name: f.name || String(key).split('/').pop() })
           }
         }
