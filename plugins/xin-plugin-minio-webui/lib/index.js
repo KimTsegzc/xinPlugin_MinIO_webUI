@@ -350,31 +350,62 @@ export function apply(ctx) {
       } catch (err) { return { ok: false, error: String((err && err.message) || err), checks: [] } }
     },
     async reconcileIngest(payload) {
-      // 从 Chroma 的 list_sources 对齐入库状态，修正「先前命令行/standalone 入库的文件在 UI 显示未入库」。
+      // 点击「刷新入库」：扫描各 Bucket 内文件，对「未入库/未成功」的执行入库（下载→ingest）。
+      // 已入库 or 已标记「暂不支持」的不重复处理。
       try {
         const state = await readState()
-        const py = String(state.chromaPython || 'python')
         const script = String(state.chromaIngestScript || '')
-        if (!script) return { ok: true, reconciled: 0, note: '未配置 ingest 脚本' }
-        const repoDir = nodePath.dirname(script).replace(/\\/g, '/')
-        const code = 'import sys,json; sys.path.insert(0,' + JSON.stringify(repoDir) + '); from chroma_store import list_sources; print(json.dumps(list_sources(), ensure_ascii=False))'
-        const res = await run([py, '-c', code])
-        if (res.exitCode !== 0) return { ok: false, error: (res.stderr || '').slice(0, 200) || ('exit ' + res.exitCode) }
-        const sources = JSON.parse(String(res.stdout || '').trim())
+        if (!script) return { ok: true, scanned: 0, ingested: 0, unsupported: 0, failed: 0, skipped: 0, note: '未配置 ingest 脚本' }
         const ing = state.ingestions || {}
-        let n = 0
-        for (const s of (Array.isArray(sources) ? sources : [])) {
-          const key = s.source
-          if (!key) continue
-          const prev = ing[key] || {}
-          if (!prev.fromChroma || prev.chunks !== s.chunks) {
-            ing[key] = Object.assign({}, prev, { ok: true, chunks: s.chunks, fromChroma: true, time: prev.time || '' })
-            n++
+        const tempPath = baseDir + '/.reconcile-ingest.bin'
+        let scanned = 0, ingested = 0, unsupported = 0, failed = 0, skipped = 0
+        for (const b of (Array.isArray(state.buckets) ? state.buckets : [])) {
+          const bucket = (b && b.name) ? String(b.name) : ''
+          if (!bucket) continue
+          const listing = await api.listObjects({ bucket: bucket, prefix: '' })
+          if (!listing || !listing.ok) continue
+          for (const f of (Array.isArray(listing.files) ? listing.files : [])) {
+            const key = f.key
+            if (!key) continue
+            scanned++
+            const prev = ing[key] || {}
+            if (prev.ok) { skipped++; continue }               // 已入库
+            if (prev.unsupported) { unsupported++; continue }  // 已标记暂不支持，不重试
+            // 下载该对象到本地临时文件后入库（源名带扩展名，供 ingest 判定类型）
+            const dl = await api.download({ bucket: bucket, key: key })
+            if (!dl || !dl.ok) {
+              failed++
+              ing[key] = Object.assign({}, prev, { ok: false, unsupported: false, time: new Date().toISOString(), error: (dl && dl.error) || '下载失败' })
+              continue
+            }
+            try {
+              const buf = Buffer.from(String(dl.base64 || ''), 'base64')
+              await nodeFs.writeFile(tempPath, buf)
+            } catch (e) {
+              failed++
+              ing[key] = Object.assign({}, prev, { ok: false, unsupported: false, time: new Date().toISOString(), error: String((e && e.message) || e) })
+              continue
+            }
+            const src = f.name || String(key).split('/').pop()
+            const res = await runIngest(state, tempPath, src)
+            const parsed = res && res.parsed
+            const isOk = !!(parsed && parsed.ok)
+            if (isOk) ingested++
+            else if (parsed && parsed.unsupported) unsupported++
+            else failed++
+            ing[key] = Object.assign({}, prev, {
+              ok: isOk,
+              unsupported: !!(parsed && parsed.unsupported),
+              skipped: !!(res && res.skipped),
+              time: new Date().toISOString(),
+              chunks: (parsed && parsed.chunks) || 0,
+              error: (isOk ? '' : (parsed && parsed.error) || String(res && res.stderr || '').slice(0, 200)) || '',
+            })
           }
         }
         state.ingestions = ing
         await writeState(state)
-        return { ok: true, reconciled: n, sources: (sources || []).map((s) => s.source) }
+        return { ok: true, scanned: scanned, ingested: ingested, unsupported: unsupported, failed: failed, skipped: skipped }
       } catch (err) { return { ok: false, error: String((err && err.message) || err) } }
     },
     async bucketExists(payload) {
@@ -487,6 +518,7 @@ export function apply(ctx) {
           ing[key] = {
             ok: !!(parsed && parsed.ok),
             skipped: !!(ingested && ingested.skipped),
+            unsupported: !!(parsed && parsed.unsupported),
             time: new Date().toISOString(),
             chunks: (parsed && parsed.chunks) || 0,
             error: (ingested && (ingested.error || (parsed && !parsed.ok ? parsed.error : ''))) || '',
