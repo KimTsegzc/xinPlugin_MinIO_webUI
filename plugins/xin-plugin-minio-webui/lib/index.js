@@ -399,6 +399,9 @@ export function apply(ctx) {
               skipped: !!(res && res.skipped),
               time: new Date().toISOString(),
               chunks: (parsed && parsed.chunks) || 0,
+              parser: (parsed && parsed.parser) || '',
+              parse_ms: (parsed && parsed.parse_ms) || 0,
+              ingest_ms: (parsed && parsed.ingest_ms) || 0,
               error: (isOk ? '' : (parsed && parsed.error) || String(res && res.stderr || '').slice(0, 200)) || '',
             })
           }
@@ -521,6 +524,9 @@ export function apply(ctx) {
             unsupported: !!(parsed && parsed.unsupported),
             time: new Date().toISOString(),
             chunks: (parsed && parsed.chunks) || 0,
+            parser: (parsed && parsed.parser) || '',
+            parse_ms: (parsed && parsed.parse_ms) || 0,
+            ingest_ms: (parsed && parsed.ingest_ms) || 0,
             error: (ingested && (ingested.error || (parsed && !parsed.ok ? parsed.error : ''))) || '',
           }
           state.ingestions = ing
