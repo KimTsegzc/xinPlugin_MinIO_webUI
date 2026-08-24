@@ -226,7 +226,7 @@ window.__ModuleLoader__.load({
 			}
 
 			const KB_NAME = 'Knowledge Base 知识库（xin-plugin-minio-webui）'
-			const KB_VERSION = 'V3.3.7'
+			const KB_VERSION = 'V3.3.8'
 			const KB_DATE = '2026-08-24'
 			const KB_AUTHOR = 'xiexin1.gd'
 			function InfoDialog({ onClose }) {
@@ -370,6 +370,8 @@ window.__ModuleLoader__.load({
 
 				const loadState = () => api('getState', {}).then((r) => { if (r && r.ok) setState(r.state); else setListErr((r && r.error) || '加载失败'); }).catch((e) => setListErr(String(e && e.message || e)));
 				React.useEffect(() => { loadState(); }, []);
+				// 默认进入第一个已连接(存在)的 Bucket；未选中且存在桶时自动选中第一个
+				React.useEffect(() => { if (state && state.buckets && state.buckets.length && !sel) setSel(state.buckets[0]); }, [state, sel]);
 				// 桶连接状态：按桶探测是否存在（当前源），绿=在线(存在) / 灰=离线(不存在/不可达)，每 15s 刷新
 				React.useEffect(() => {
 					const names = (state && state.buckets) ? state.buckets.map((b) => b.name) : [];
@@ -500,8 +502,7 @@ window.__ModuleLoader__.load({
 					React.createElement('span', { className: 'kb-topbar-title' }, 'Knowledge Base 知识库'),
 					React.createElement('div', { className: 'kb-topbar-actions' },
 						React.createElement('button', { className: 'kb-iconbtn', onClick: () => setConfigOpen(true), title: '知识库配置' }, IconGear),
-						React.createElement('button', { className: 'kb-iconbtn', onClick: () => setInfoOpen(true), title: '插件信息' }, IconInfo),
-						React.createElement('button', { className: 'kb-iconbtn', onClick: () => setAddOpen(true), title: '加Bucket' }, IconPlus)));
+						React.createElement('button', { className: 'kb-iconbtn', onClick: () => setInfoOpen(true), title: '插件信息' }, IconInfo)));
 
 				const bucketBar = React.createElement('div', { className: 'kb-bucketbar' },
 					React.createElement('span', { className: 'kb-bucketbar-title' }, 'Buckets'),
