@@ -244,40 +244,46 @@ window.__ModuleLoader__.load({
 						React.createElement('div', { className: 'kb-dialog-foot' }, saveMsg ? React.createElement('span', { className: 'kb-status' }, saveMsg) : null, React.createElement('button', { className: 'kb-btn kb-btn-primary', onClick: save }, '保存'), React.createElement('button', { className: 'kb-btn', onClick: onClose }, '关闭'))));
 			}
 
-			const KB_NAME = 'Knowledge Base 知识库（xin-plugin-minio-webui）'
+						const KB_NAME = 'Knowledge Base 知识库（MinIO_webUI + Chroma_fastMCP）'
 			const KB_VERSION = 'V3.4.1'
 			const KB_DATE = '2026-08-24'
 			const KB_AUTHOR = 'xiexin1.gd'
+			const KB_COMPONENTS = [
+				{ name: 'MinIO_webUI', pkg: 'xin-plugin-minio-webui', ver: 'V3.4.1', desc: 'DSH 内嵌 Knowledge Base 面板（Bucket 栏 + 资源管理器式文件管理：上传/下载/预览/删除/多选/搜索/排序 + RAG-MCP 配置），驱动文件入库。' },
+				{ name: 'Chroma_fastMCP', pkg: 'xinPlugin_Chroma_fastMCP', ver: 'v1.1.2', desc: '向量检索层：自包含解析工具层（pdf/docx/ofd/txt）+ 分块 + Chroma 向量入库 + FastMCP search/ingest_file/list_sources。' },
+			]
 			function InfoDialog({ onClose }) {
 				const p = (t, k) => React.createElement('p', { key: k, className: 'kb-info-p' }, t);
 				const li = (t, k) => React.createElement('li', { key: k }, t);
+				const meta = (label, value, k) => React.createElement('div', { key: k }, React.createElement('span', { className: 'kb-info-kv' }, label), value);
+				const flow = (items) => React.createElement('div', { className: 'kb-info-flow' }, items.map((s, i) => React.createElement(React.Fragment, { key: i }, i ? ' → ' : '', React.createElement('b', null, s))));
+				const compRows = KB_COMPONENTS.map((c) => React.createElement(React.Fragment, { key: c.pkg },
+					meta(c.name + '（' + c.pkg + '）', React.createElement('strong', null, c.ver)),
+					React.createElement('div', { style: { fontSize: 12, color: 'var(--dsw-alias-label-secondary)' } }, c.desc)));
 				return React.createElement('div', { className: 'kb-mask', onClick: onClose },
-					React.createElement('div', { className: 'kb-dialog', style: { width: 'min(600px,90vw)', maxHeight: '84vh' }, onClick: (e) => e.stopPropagation() },
+					React.createElement('div', { className: 'kb-dialog', style: { width: 'min(640px,90vw)', maxHeight: '88vh' }, onClick: (e) => e.stopPropagation() },
 						React.createElement('div', { className: 'kb-dialog-head' }, React.createElement('span', { className: 'kb-dialog-title' }, '插件信息'), React.createElement('button', { className: 'kb-iconbtn', onClick: onClose }, IconClose)),
 						React.createElement('div', { className: 'kb-dialog-body' },
 							React.createElement('div', { className: 'kb-section' }, '基本信息'),
 							React.createElement('div', { className: 'kb-info-meta' },
-								React.createElement('div', null, React.createElement('span', { className: 'kb-info-kv' }, '名称：'), KB_NAME),
-								React.createElement('div', null, React.createElement('span', { className: 'kb-info-kv' }, '版本：'), KB_VERSION),
-								React.createElement('div', null, React.createElement('span', { className: 'kb-info-kv' }, '日期：'), KB_DATE),
-								React.createElement('div', null, React.createElement('span', { className: 'kb-info-kv' }, '作者：'), KB_AUTHOR)),
+								meta('名称：', KB_NAME, 'n'), meta('版本：', KB_VERSION, 'v'), meta('日期：', KB_DATE, 'd'), meta('作者：', KB_AUTHOR, 'a')),
+							React.createElement('div', { className: 'kb-section' }, '插件组成'),
+							React.createElement('div', { className: 'kb-info-meta' }, compRows),
 							React.createElement('div', { className: 'kb-section' }, '简介'),
-							p('DSH 知识库文件管理插件：浏览/预览/上传 MinIO 对象，联动 Chroma 向量库做 RAG 检索，并经 FastMCP 暴露给 agent，在问答时检索原文并标注出处。', 'intro'),
+							p('由两个插件组成：MinIO_webUI 负责 Knowledge Base 面板与 MinIO 文件管理；Chroma_fastMCP 负责解析/向量化/FastMCP 检索。联动实现「MinIO 上传 → 向量入库 → agent 问答检索原文（带文件/页码/行号出处）」。', 'intro'),
+							React.createElement('div', { className: 'kb-section' }, '项目架构'),
+							flow(['文件', '对象库（MinIO）', '解析工具层', '向量库（Chroma）', 'RAG-MCP（FastMCP）', 'DSH agent']),
+							React.createElement('ul', { className: 'kb-info-list' },
+								li('文件 → 对象库：MinIO_webUI 上传/浏览/预览/下载/删除文件到 MinIO 桶（endpoint/密钥 AES-256-GCM 加密存储）。', 'a1'),
+								li('解析工具层：Chroma_fastMCP 的 ingest.py 自包含解析（pdf→pdftotext/pdfminer·中文 CMap；docx/ofd→zip+XML；txt/md 等→UTF-8/GBK）。', 'a2'),
+								li('向量库：文本分块（6 行/块、重叠 1 行、过滤噪声、带页码/行号）→ Chroma 向量化入库，语义+字符二元组 BM25 混合检索。', 'a3'),
+								li('RAG-MCP：FastMCP 把 search / ingest_file / list_sources 暴露成 MCP 工具；DSH agent 检索原文并标注出处（文件/页码/行号）。', 'a4'),
+								li('联动配置：MinIO_webUI 的 RAG-MCP 配置（Python / Ingest 脚本 / MCP 端点 / ServerName）指向本插件 ingest.py；依赖由 Chroma_fastMCP 的 install.ps1 一键装（chromadb / fastmcp / pypdf / pdfminer.six）。', 'a5')),
 							React.createElement('div', { className: 'kb-section' }, '最新版本更新点'),
 							React.createElement('ul', { className: 'kb-info-list' },
-								li('V3.4.1：新增「重新入库」（风险确认）——重扫全部 Bucket 重新向量化入库，并支持多选批量重新入库', 'u00'),
-								li('V3.4.0：「扫描入库」先扫总量再逐文件处理，提示语分步显示（扫到N个未入库→处理第K个→解析中→入库完成·解析/向量耗时）', 'u0'),
-								li('V3.3.1：RAG 入库列改名为「RAG向量入库」；状态消歧义（格式暂不支持 / 未入库），修复图片等不支持格式误显示失败', 'u1'),
-								li('V3.3.0：入库支持 docx / ofd / pdf（解析层由 Chroma 插件 ingest.py 自包含提供：pdf 走 pdftotext/pdfminer+中文 CMap；docx/ofd 走 zip+XML 零依赖）；「扫描入库」点击扫描桶内未入库文件并自动入库；列表新增「RAG向量入库」列并修复元素叠加', 'u2')),
-							React.createElement('div', { className: 'kb-section' }, '主要功能与实现链路'),
-							React.createElement('div', { className: 'kb-info-flow' }, ['文件', '对象库', '解析工具层', '向量库', 'RAG-MCP 服务'].map((s, i) => React.createElement(React.Fragment, { key: i }, i ? ' → ' : '', React.createElement('b', null, s)))),
-							React.createElement('ul', { className: 'kb-info-list' },
-								li('文件：从面板上传/拖放文件。', 'f1'),
-								li('对象库：文件存为 MinIO 桶内对象（endpoint/密钥 AES-256-GCM 加密存储），支持浏览/预览/下载/删除/多选。', 'f2'),
-								li('解析工具层：上传成功后调用 ingest.py，按类型抽文本（pdf→pdftotext/pypdf；docx/ofd→zip+XML；txt/md/csv 等→UTF-8/GBK）。', 'f3'),
-								li('向量库：抽取的文本分块（6 行/块、重叠 1 行、过滤噪声、带页码行号）→ Chroma 向量化入库，语义+BM25 混合检索。', 'f4'),
-								li('RAG-MCP 服务：FastMCP 把 search / ingest_file / list_sources 暴露成 MCP 工具；agent 问答时检索原文并标注出处（文件/页码/行号）。', 'f5')))));
+								li('V3.4.1：新增「重新入库」（风险确认）——重扫全部 Bucket 重新向量化入库，并支持多选批量重新入库。', 'u00')))));
 			}
+
 
 			function DetailModal({ item, bucket, onClose }) {
 				const ig = (item && item.ingest) || {};
