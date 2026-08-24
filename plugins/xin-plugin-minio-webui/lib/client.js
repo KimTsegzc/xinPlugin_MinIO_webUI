@@ -268,7 +268,7 @@ window.__ModuleLoader__.load({
 								li('V3.4.1：新增「重新入库」（风险确认）——重扫全部 Bucket 重新向量化入库，并支持多选批量重新入库', 'u00'),
 								li('V3.4.0：「扫描入库」先扫总量再逐文件处理，提示语分步显示（扫到N个未入库→处理第K个→解析中→入库完成·解析/向量耗时）', 'u0'),
 								li('V3.3.1：RAG 入库列改名为「RAG向量入库」；状态消歧义（格式暂不支持 / 未入库），修复图片等不支持格式误显示失败', 'u1'),
-								li('V3.3.0：入库支持 docx / ofd / pdf（参照 xin-kb 解析：pdf 走内嵌 pdftotext+中文 CMap 兜底 pypdf；docx/ofd 走 zip+XML 零依赖）；「扫描入库」点击扫描桶内未入库文件并自动入库；列表新增「RAG向量入库」列并修复元素叠加', 'u2')),
+								li('V3.3.0：入库支持 docx / ofd / pdf（解析层由 Chroma 插件 ingest.py 自包含提供：pdf 走 pdftotext/pdfminer+中文 CMap；docx/ofd 走 zip+XML 零依赖）；「扫描入库」点击扫描桶内未入库文件并自动入库；列表新增「RAG向量入库」列并修复元素叠加', 'u2')),
 							React.createElement('div', { className: 'kb-section' }, '主要功能与实现链路'),
 							React.createElement('div', { className: 'kb-info-flow' }, ['文件', '对象库', '解析工具层', '向量库', 'RAG-MCP 服务'].map((s, i) => React.createElement(React.Fragment, { key: i }, i ? ' → ' : '', React.createElement('b', null, s)))),
 							React.createElement('ul', { className: 'kb-info-list' },
