@@ -333,8 +333,8 @@ export function apply(ctx) {
         } catch (e) { checks.push({ name: 'Ingest 脚本', ok: false, msg: '未找到: ' + (script || '(未配置)') }) }
         // 3) Chroma 模块
         try {
-          const im = await run([py, '-c', 'import chromadb,fastmcp,pypdf'])
-          checks.push({ name: 'Chroma 模块', ok: im.exitCode === 0, msg: im.exitCode === 0 ? 'chromadb/fastmcp/pypdf 可导入' : (im.stderr || '').slice(0, 120) || 'import 失败' })
+          const im = await run([py, '-c', 'import chromadb,fastmcp,pypdf,pdfminer'])
+          checks.push({ name: 'Chroma 模块', ok: im.exitCode === 0, msg: im.exitCode === 0 ? 'chromadb/fastmcp/pypdf/pdfminer 可导入' : (im.stderr || '').slice(0, 120) || 'import 失败' })
         } catch (e) { checks.push({ name: 'Chroma 模块', ok: false, msg: String((e && e.message) || e) }) }
         // 4) MCP HTTP 端点
         const url = String(cfg.ragMcpUrl || '')
