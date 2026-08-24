@@ -7,7 +7,7 @@ window.__ModuleLoader__.load({
 		let ReactDOM = require('react-dom');
 
 		const MAX_FILES = 20;
-		const MAX_SIZE_BYTES = 20 * 1024 * 1024;
+		const MAX_SIZE_BYTES = 50 * 1024 * 1024;
 
 		const inject = ['betterSidebar'];
 
@@ -226,7 +226,7 @@ window.__ModuleLoader__.load({
 			}
 
 			const KB_NAME = 'Knowledge Base 知识库（xin-plugin-minio-webui）'
-			const KB_VERSION = 'V3.3.2'
+			const KB_VERSION = 'V3.3.3'
 			const KB_DATE = '2026-08-24'
 			const KB_AUTHOR = 'xiexin1.gd'
 			function InfoDialog({ onClose }) {
@@ -359,7 +359,7 @@ window.__ModuleLoader__.load({
 					const files = Array.from(fileList);
 					if (files.length > MAX_FILES) { setNotice('最多一次上传 ' + MAX_FILES + ' 个文件（当前 ' + files.length + ' 个）'); return; }
 					const over = files.filter((f) => f.size > MAX_SIZE_BYTES);
-					if (over.length) { setNotice('单个文件不能超过 20MB：' + over.map((f) => f.name).join('、')); return; }
+					if (over.length) { setNotice('单个文件不能超过 50MB：' + over.map((f) => f.name).join('、')); return; }
 					const ac = new AbortController();
 					uploadAbort.current = ac;
 					uploadCancelled.current = false;
@@ -544,7 +544,7 @@ window.__ModuleLoader__.load({
 						React.createElement('div', { className: 'kb-drop-icon' }, IconUpload),
 						React.createElement('div', { className: 'kb-drop-title' }, sel ? ('松开以上传' + (dragInfo && dragInfo.count ? ' ' + dragInfo.count + ' 个文件' : '')) : '请先选择左侧 Bucket'),
 						React.createElement('div', { className: 'kb-drop-sub' }, sel ? ('上传到：' + sel.name + (prefix ? '/' + prefix : '')) : '选择 Bucket 后即可拖放上传'),
-						React.createElement('div', { className: 'kb-drop-limit' }, '最多 ' + MAX_FILES + ' 个文件，单个不超过 20MB')
+						React.createElement('div', { className: 'kb-drop-limit' }, '最多 ' + MAX_FILES + ' 个文件，单个不超过 50MB')
 					) : null;
 					explorer = React.createElement('div', { className: 'kb-explorer', onDragEnter, onDragOver, onDragLeave, onDrop }, toolbar, bulkBar, notice ? React.createElement('div', { className: 'kb-notice' }, notice) : null, explorer, dropdown, dropOverlay);
 				}
